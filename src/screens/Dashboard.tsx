@@ -6,6 +6,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import StatCard from '../../components/StatCard';
 import AICoachCard from '../../components/AICoachCard';
+import DayCalendar from '../../components/DayCalendar';
 import { palette } from '../../lib/tw';
 
 // tiny helper
@@ -19,60 +20,69 @@ function todayYMD() {
 
 export default function Dashboard() {
   const nav = useNavigation<any>();
+  const [selectedDay, setSelectedDay] = useState<string>(todayYMD());
   const [sleepMin, setSleepMin] = useState<number>(0);
   const [hasPeriod, setHasPeriod] = useState<boolean>(false);
   const [nutritionCount, setNutritionCount] = useState<number>(0);
   const [exerciseCount, setExerciseCount] = useState<number>(0);
-  const day = todayYMD();
 
   useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u?.user) return;
+    loadDataForDay(selectedDay);
+  }, [selectedDay]);
 
-      // sum today's sleep minutes
-      const { data: sleepRows } = await supabase
-        .from('entries')
-        .select('payload')
-        .eq('user_id', u.user.id)
-        .eq('category', 'sleep')
-        .eq('day', day);
+  async function loadDataForDay(day: string) {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user) return;
 
-      const total = (sleepRows ?? []).reduce((acc: number, r: any) => acc + (r.payload?.duration_min ?? 0), 0);
-      setSleepMin(total);
+    // sum selected day's sleep minutes
+    const { data: sleepRows } = await supabase
+      .from('entries')
+      .select('payload')
+      .eq('user_id', u.user.id)
+      .eq('category', 'sleep')
+      .eq('day', day);
 
-      // did we log period today?
-      const { data: periodRows } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('user_id', u.user.id)
-        .eq('category', 'period')
-        .eq('day', day)
-        .limit(1);
-      setHasPeriod((periodRows ?? []).length > 0);
+    const total = (sleepRows ?? []).reduce((acc: number, r: any) => acc + (r.payload?.duration_min ?? 0), 0);
+    setSleepMin(total);
 
-      // count today's nutrition entries
-      const { data: nutritionRows } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('user_id', u.user.id)
-        .eq('category', 'nutrition')
-        .eq('day', day);
-      setNutritionCount((nutritionRows ?? []).length);
+    // did we log period on selected day?
+    const { data: periodRows } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('user_id', u.user.id)
+      .eq('category', 'period')
+      .eq('day', day)
+      .limit(1);
+    setHasPeriod((periodRows ?? []).length > 0);
 
-      // count today's exercise entries
-      const { data: exerciseRows } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('user_id', u.user.id)
-        .eq('category', 'exercise')
-        .eq('day', day);
-      setExerciseCount((exerciseRows ?? []).length);
-    })();
-  }, [day]);
+    // count selected day's nutrition entries
+    const { data: nutritionRows } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('user_id', u.user.id)
+      .eq('category', 'nutrition')
+      .eq('day', day);
+    setNutritionCount((nutritionRows ?? []).length);
+
+    // count selected day's exercise entries
+    const { data: exerciseRows } = await supabase
+      .from('entries')
+      .select('id')
+      .eq('user_id', u.user.id)
+      .eq('category', 'exercise')
+      .eq('day', day);
+    setExerciseCount((exerciseRows ?? []).length);
+  }
 
   return (
     <View style={{ padding: 16, gap: 12 }}>
+      {/* Calendar Overview */}
+      <DayCalendar
+        selectedDay={selectedDay}
+        onSelect={setSelectedDay}
+        categories={['nutrition', 'exercise', 'period', 'sleep']}
+      />
+
       {/* AI Coach Card */}
       <AICoachCard />
 
@@ -80,7 +90,7 @@ export default function Dashboard() {
       <StatCard
         title="Period"
         value={hasPeriod ? 'Logged' : 'Not logged'}
-        accentColor={palette.accent} // your pink
+        accentColor={palette.accent}
         icon={<FontAwesome5 name="tint" size={16} color="white" />}
         onPress={() => nav.navigate('Cycle', { tab: 'period' })}
       />
@@ -88,8 +98,8 @@ export default function Dashboard() {
       {/* Cycle → Sleep subtab */}
       <StatCard
         title="Sleep"
-        value={`${(sleepMin / 60).toFixed(1)} h today`}
-        accentColor={palette.accent} // same family as cycle
+        value={`${(sleepMin / 60).toFixed(1)} hours`}
+        accentColor={palette.accent}
         icon={<FontAwesome5 name="moon" size={16} color="white" />}
         onPress={() => nav.navigate('Cycle', { tab: 'sleep' })}
       />
@@ -97,7 +107,7 @@ export default function Dashboard() {
       {/* Nutrition */}
       <StatCard
         title="Nutrition"
-        value={`${nutritionCount} ${nutritionCount === 1 ? 'entry' : 'entries'} today`}
+        value={`${nutritionCount} ${nutritionCount === 1 ? 'entry' : 'entries'}`}
         accentColor={palette.green}
         icon={<FontAwesome5 name="apple-alt" size={16} color="white" />}
         onPress={() => nav.navigate('Nutrition')}
@@ -106,7 +116,7 @@ export default function Dashboard() {
       {/* Exercise */}
       <StatCard
         title="Exercise"
-        value={`${exerciseCount} ${exerciseCount === 1 ? 'session' : 'sessions'} today`}
+        value={`${exerciseCount} ${exerciseCount === 1 ? 'session' : 'sessions'}`}
         accentColor={palette.teal}
         icon={<FontAwesome5 name="dumbbell" size={16} color="white" />}
         onPress={() => nav.navigate('Exercise')}
