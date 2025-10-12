@@ -23,6 +23,7 @@ import {
 } from '../lib/integrations';
 import { Provider, SourceAccount } from '../types/integrations';
 import { initHealthKit, syncHealthKit, isHealthKitAvailable } from '../integrations/healthkit';
+import { initHealthConnect, syncHealthConnect, isHealthConnectAvailable } from '../integrations/healthconnect';
 
 interface ProviderConfig {
   id: Provider;
@@ -108,10 +109,7 @@ export default function Connections() {
       if (provider === 'apple_health') {
         await handleConnectHealthKit();
       } else if (provider === 'health_connect') {
-        Alert.alert(
-          'Coming Soon',
-          'Health Connect integration will be available in the next update.'
-        );
+        await handleConnectHealthConnect();
       }
       return;
     }
@@ -195,6 +193,32 @@ export default function Connections() {
     }
   }
 
+  async function handleConnectHealthConnect() {
+    try {
+      const available = await isHealthConnectAvailable();
+      if (!available) {
+        Alert.alert('Not Available', 'Health Connect is not available on this device. Please install Google Health Connect from the Play Store.');
+        return;
+      }
+
+      // Initialize and request permissions
+      await initHealthConnect();
+      
+      // Perform initial sync
+      const result = await syncHealthConnect();
+      
+      if (result.success) {
+        Alert.alert('Connected!', `Synced ${result.metrics_inserted} metrics from Health Connect`);
+        await loadAccounts();
+      } else {
+        Alert.alert('Sync Failed', result.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      console.error('Health Connect connection error:', error);
+      Alert.alert('Error', error.message || 'Failed to connect to Health Connect');
+    }
+  }
+
   async function handleSync(provider: Provider) {
     try {
       setSyncing(provider);
@@ -206,6 +230,17 @@ export default function Connections() {
           Alert.alert(
             'Sync Complete',
             `Synced ${result.metrics_inserted} metrics from Apple Health`
+          );
+          await loadAccounts();
+        } else {
+          Alert.alert('Sync Failed', result.error || 'Unknown error');
+        }
+      } else if (provider === 'health_connect') {
+        const result = await syncHealthConnect();
+        if (result.success) {
+          Alert.alert(
+            'Sync Complete',
+            `Synced ${result.metrics_inserted} metrics from Health Connect`
           );
           await loadAccounts();
         } else {

@@ -44,4 +44,14 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
       'com.apple.developer.healthkit.access': [],
     },
   },
+  android: {
+    package: 'com.serraactive.app',
+    permissions: [
+      'android.permission.health.READ_STEPS',
+      'android.permission.health.READ_SLEEP',
+      'android.permission.health.READ_HEART_RATE',
+      'android.permission.health.READ_DISTANCE',
+      'android.permission.health.READ_ACTIVE_CALORIES_BURNED',
+    ],
+  },
 });
