@@ -21,6 +21,8 @@ export default function Dashboard() {
   const nav = useNavigation<any>();
   const [sleepMin, setSleepMin] = useState<number>(0);
   const [hasPeriod, setHasPeriod] = useState<boolean>(false);
+  const [nutritionCount, setNutritionCount] = useState<number>(0);
+  const [exerciseCount, setExerciseCount] = useState<number>(0);
   const day = todayYMD();
 
   useEffect(() => {
@@ -48,6 +50,24 @@ export default function Dashboard() {
         .eq('day', day)
         .limit(1);
       setHasPeriod((periodRows ?? []).length > 0);
+
+      // count today's nutrition entries
+      const { data: nutritionRows } = await supabase
+        .from('entries')
+        .select('id')
+        .eq('user_id', u.user.id)
+        .eq('category', 'nutrition')
+        .eq('day', day);
+      setNutritionCount((nutritionRows ?? []).length);
+
+      // count today's exercise entries
+      const { data: exerciseRows } = await supabase
+        .from('entries')
+        .select('id')
+        .eq('user_id', u.user.id)
+        .eq('category', 'exercise')
+        .eq('day', day);
+      setExerciseCount((exerciseRows ?? []).length);
     })();
   }, [day]);
 
@@ -74,7 +94,23 @@ export default function Dashboard() {
         onPress={() => nav.navigate('Cycle', { tab: 'sleep' })}
       />
 
-      {/* keep your Nutrition / Exercise cards as-is */}
+      {/* Nutrition */}
+      <StatCard
+        title="Nutrition"
+        value={`${nutritionCount} ${nutritionCount === 1 ? 'entry' : 'entries'} today`}
+        accentColor={palette.green}
+        icon={<FontAwesome5 name="apple-alt" size={16} color="white" />}
+        onPress={() => nav.navigate('Nutrition')}
+      />
+
+      {/* Exercise */}
+      <StatCard
+        title="Exercise"
+        value={`${exerciseCount} ${exerciseCount === 1 ? 'session' : 'sessions'} today`}
+        accentColor={palette.teal}
+        icon={<FontAwesome5 name="dumbbell" size={16} color="white" />}
+        onPress={() => nav.navigate('Exercise')}
+      />
     </View>
   );
 }
