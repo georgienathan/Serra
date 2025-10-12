@@ -193,6 +193,48 @@ Serra now has a **complete, production-ready wearables integration system** that
 
 ---
 
+### PR6: Dashboard Integration
+**Branch:** `feature/dashboard-metrics`
+
+**What was built:**
+- Dashboard now queries `daily_aggregates` view
+- Display wearable metrics (steps, calories, heart rate)
+- Combine manual entries with wearable data
+- Calendar dots show wearable data indicators
+- Conditional rendering based on data availability
+
+**Key files:**
+- `src/screens/Dashboard.tsx` (updated)
+- `components/StatCard.tsx` (added subtitle support)
+- `components/DayCalendar.tsx` (added wearable dots)
+
+**Dashboard enhancements:**
+- **Steps Card** - Shows daily step count from wearables
+- **Calories Card** - Shows total calories burned
+- **Heart Rate Card** - Shows average heart rate
+- **Sleep Integration** - Combines manual + wearable sleep (uses higher value)
+- **Subtitle Labels** - "From wearables" to distinguish data sources
+
+**Calendar updates:**
+- Blue dot indicator for days with wearable data
+- Multi-dot display shows manual + wearable data
+- Queries last 60 days of aggregates
+- Efficient single query for all metrics
+
+**Data merging strategy:**
+- Sleep: Use max(manual, wearable) to avoid double-counting
+- Other metrics: Display wearable data alongside manual entries
+- Clear visual distinction with subtitles
+- Tap cards to navigate to Connections screen
+
+**UI improvements:**
+- Conditional rendering - only show cards when data exists
+- Formatted values (1,234 steps, 450 kcal, 72 bpm)
+- Consistent color scheme
+- Smooth integration with existing cards
+
+---
+
 ## 📊 Supported Providers
 
 | Provider | Type | Status | Metrics |
@@ -379,11 +421,13 @@ Pre-aggregated daily metrics for fast dashboard queries.
 - ✅ Implement Fitbit sync (activity, sleep, heart rate)
 - ✅ Implement WHOOP sync (recovery, strain, sleep)
 
-### PR6: Dashboard Integration
-- Query `daily_aggregates` view in Dashboard
-- Show metrics alongside manual entries
-- Update calendar dots to include wearable data
-- Add charts/graphs for trends
+### ✅ PR6: Dashboard Integration - COMPLETE
+- ✅ Query `daily_aggregates` view in Dashboard
+- ✅ Show metrics alongside manual entries
+- ✅ Update calendar dots to include wearable data
+- ✅ Display steps, calories, heart rate cards
+- ✅ Combine manual + wearable sleep data
+- 🔜 Add charts/graphs for trends (future enhancement)
 
 ### Enhancements
 - Background sync for local providers (iOS Background Tasks, Android WorkManager)
