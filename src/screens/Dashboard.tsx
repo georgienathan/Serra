@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import StatCard from '../../components/StatCard';
+import AICoachCard from '../../components/AICoachCard';
 import { palette } from '../../lib/tw';
 
 // tiny helper
@@ -52,6 +53,9 @@ export default function Dashboard() {
 
   return (
     <View style={{ padding: 16, gap: 12 }}>
+      {/* AI Coach Card */}
+      <AICoachCard />
+
       {/* Cycle → Period subtab */}
       <StatCard
         title="Period"
