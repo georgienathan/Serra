@@ -1,13 +1,18 @@
-import 'react-native-url-polyfill/auto';
+import 'react-native-url-polyfill/auto.js';
 import 'react-native-get-random-values';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+type Extra = { supabaseUrl?: string; supabaseAnonKey?: string };
+const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+if (!extra.supabaseUrl || !extra.supabaseAnonKey) {
+  throw new Error('Missing Supabase env: set SUPABASE_URL and SUPABASE_ANON_KEY in .env');
+}
+
+export const supabase = createClient(extra.supabaseUrl, extra.supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

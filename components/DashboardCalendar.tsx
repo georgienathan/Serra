@@ -1,7 +1,7 @@
 // components/DashboardCalendar.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { Calendar, DateObject } from 'react-native-calendars';
+import { Calendar } from 'react-native-calendars';
 import { supabase } from '../src/lib/supabase';
 
 type Category = 'nutrition' | 'exercise' | 'cycle' | 'sleep';
@@ -102,7 +102,7 @@ export default function DashboardCalendar() {
     return { ...sum, count: items.length };
   }, [rows, selected]);
 
-  function onDayPress(d: DateObject) {
+  function onDayPress(d: any) {
     setSelected(d.dateString); // 'YYYY-MM-DD'
   }
 
