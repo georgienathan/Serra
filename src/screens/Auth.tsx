@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
   },
-  message: { textAlign: 'center', marginBottom: 10, color: '#444' },
+  message: { textAlign: 'center', marginBottom: 10, color: '#fff' },
   primaryBtn: { backgroundColor: '#111827', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   primaryText: { color: 'white', fontWeight: '600', fontSize: 16 },
   secondaryBtn: { backgroundColor: '#e5e7eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },

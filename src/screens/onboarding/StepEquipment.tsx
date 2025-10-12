@@ -20,16 +20,16 @@ export default function StepEquipment(props: Props) {
 
   return (
     <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12 }}>What equipment do you have?</Text>
+      <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#fff' }}>What equipment do you have?</Text>
 
       <TextInput placeholder="Clothes (comma separated)" value={clothes} onChangeText={setClothes}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
       <TextInput placeholder="Home" value={home} onChangeText={setHome}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
       <TextInput placeholder="Outdoors" value={outdoors} onChangeText={setOutdoors}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
       <TextInput placeholder="Gym" value={gym} onChangeText={setGym}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:18 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:18, backgroundColor:'#fff', color:'#111827' }} />
 
       <View style={{ flexDirection: 'row', justifyContent:'space-between' }}>
         <Pressable onPress={onBack} style={{ backgroundColor: '#e5e7eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginRight: 8 }}>
