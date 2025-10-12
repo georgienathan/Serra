@@ -35,7 +35,7 @@ export default function StepEquipment(props: Props) {
         <Pressable onPress={onBack} style={{ backgroundColor: '#e5e7eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginRight: 8 }}>
           <Text style={{ color: '#111827', fontWeight: '700' }}>Back</Text>
         </Pressable>
-        <Pressable onPress={onFinish} disabled={saving} style={{ backgroundColor: '#f7a1b2', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginLeft: 8, opacity: saving ? 0.6 : 1 }}>
+        <Pressable onPress={onFinish} disabled={saving} style={{ backgroundColor: '#f2a1b5', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginLeft: 8, opacity: saving ? 0.6 : 1 }}>
           {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: 'white', fontWeight: '700' }}>Finish Sign Up</Text>}
         </Pressable>
       </View>

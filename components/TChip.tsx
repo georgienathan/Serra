@@ -19,7 +19,7 @@ export default function TChip({
 }
 const styles = StyleSheet.create({
   chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff' },
-  chipSel: { backgroundColor: '#111827', borderColor: '#111827' },
+  chipSel: { backgroundColor: palette.teal, borderColor: palette.teal },
   text: { color: '#111827' },
   textSel: { color: '#fff', fontWeight: '600' },
 });

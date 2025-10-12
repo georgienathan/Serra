@@ -29,8 +29,8 @@ export default function StepDetails(props: Props) {
   } = props;
 
   const Btn = ({ label, onPress, selected }: {label: string; onPress: () => void; selected?: boolean}) => (
-    <Pressable onPress={onPress} style={{ padding: 10, borderRadius: 10, borderWidth: 1, borderColor: selected ? '#111827' : '#ccc', backgroundColor: selected ? '#fff' : 'transparent', marginRight: 8, marginBottom: 8 }}>
-      <Text style={{ color: selected ? '#111827' : '#fff' }}>{label}</Text>
+    <Pressable onPress={onPress} style={{ padding: 10, borderRadius: 10, borderWidth: 1, borderColor: selected ? '#3ccbc5' : '#ccc', backgroundColor: selected ? '#3ccbc5' : 'transparent', marginRight: 8, marginBottom: 8 }}>
+      <Text style={{ color: selected ? '#fff' : '#fff' }}>{label}</Text>
     </Pressable>
   );
 
@@ -67,7 +67,7 @@ export default function StepDetails(props: Props) {
         ))}
       </View>
 
-      <Pressable onPress={onNext} style={{ backgroundColor: '#f7a1b2', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+      <Pressable onPress={onNext} style={{ backgroundColor: '#f2a1b5', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
         <Text style={{ color: 'white', fontWeight: '700' }}>Continue</Text>
       </Pressable>
     </View>

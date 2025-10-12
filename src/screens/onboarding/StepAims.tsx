@@ -21,7 +21,7 @@ export default function StepAims({ skills, setSkills, onNext, onBack }: Props) {
         <Pressable onPress={onBack} style={{ backgroundColor: '#e5e7eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginRight: 8 }}>
           <Text style={{ color: '#111827', fontWeight: '700' }}>Back</Text>
         </Pressable>
-        <Pressable onPress={onNext} style={{ backgroundColor: '#f7a1b2', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginLeft: 8 }}>
+        <Pressable onPress={onNext} style={{ backgroundColor: '#f2a1b5', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flex: 1, marginLeft: 8 }}>
           <Text style={{ color: 'white', fontWeight: '700' }}>Continue</Text>
         </Pressable>
       </View>

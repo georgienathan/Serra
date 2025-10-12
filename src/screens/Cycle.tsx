@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 12 },
 
   item: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
-  itemSel: { backgroundColor: 'rgba(255,255,255,0.08)' },
+  itemSel: { backgroundColor: '#3ccbc5' },
   itemText: { color: palette.text },
   itemTextSel: { color: '#fff', fontWeight: '700' },
 
