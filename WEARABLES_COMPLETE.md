@@ -9,6 +9,7 @@ Serra now has a **complete, production-ready wearables integration system** that
 
 ### PR0: Foundation (Database + Types)
 **Branch:** `feature/wearables-foundation`
+**Branch:** `feature/wearables-foundation`
 
 **What was built:**
 - Database schema with `source_accounts`, `metrics`, `sync_cursors` tables
@@ -143,14 +144,63 @@ Serra now has a **complete, production-ready wearables integration system** that
 
 ---
 
+### PR5: Cloud Providers Sync (Strava, Fitbit, WHOOP)
+**Branch:** `feature/cloud-providers-sync`
+
+**What was built:**
+- Complete Strava API integration
+- Complete Fitbit API integration
+- Complete WHOOP API integration
+- All cloud providers now fully functional
+
+**Key files:**
+- `supabase/functions/sync-provider/index.ts` (updated)
+
+**Strava metrics synced:**
+- Workout duration (moving time)
+- Distance (runs, rides, swims)
+- Active calories burned
+- Average heart rate
+- Activity type and name
+
+**Fitbit metrics synced:**
+- Steps (daily count)
+- Total calories and active calories
+- Sleep duration, deep sleep, REM sleep
+- Resting heart rate
+- Sleep efficiency
+
+**WHOOP metrics synced:**
+- Sleep duration, deep sleep, REM sleep
+- Recovery score
+- HRV (heart rate variability)
+- Resting heart rate
+- Workout strain score
+- Active calories (converted from kilojoules)
+
+**How it works:**
+1. Same unified `sync-provider` Edge Function
+2. Routes to provider-specific sync logic
+3. Fetches data from provider APIs
+4. Normalizes to standard metrics format
+5. Upserts to `metrics` table
+6. Updates sync cursors
+
+**API Endpoints Used:**
+- Strava: `/api/v3/athlete/activities`
+- Fitbit: `/1/user/-/activities`, `/1.2/user/-/sleep`, `/1/user/-/activities/heart`
+- WHOOP: `/developer/v1/activity/sleep`, `/developer/v1/recovery`, `/developer/v1/activity/workout`
+
+---
+
 ## 📊 Supported Providers
 
 | Provider | Type | Status | Metrics |
 |----------|------|--------|---------|
 | **Oura Ring** | Cloud OAuth | ✅ Complete | Sleep, readiness, activity, steps, calories |
-| **Strava** | Cloud OAuth | 🔧 Stub ready | Workouts, runs, rides, distance |
-| **Fitbit** | Cloud OAuth | 🔧 Stub ready | Activity, sleep, heart rate, steps |
-| **WHOOP** | Cloud OAuth | 🔧 Stub ready | Recovery, strain, sleep |
+| **Strava** | Cloud OAuth | ✅ Complete | Workouts, runs, rides, distance, heart rate |
+| **Fitbit** | Cloud OAuth | ✅ Complete | Activity, sleep, heart rate, steps, calories |
+| **WHOOP** | Cloud OAuth | ✅ Complete | Recovery, strain, sleep, HRV |
 | **Apple Health** | Local iOS | ✅ Complete | Steps, sleep, calories |
 | **Health Connect** | Local Android | ✅ Complete | Steps, sleep, calories, heart rate |
 
@@ -324,10 +374,10 @@ Pre-aggregated daily metrics for fast dashboard queries.
 
 ## 📈 Next Steps (Optional)
 
-### PR5: Additional Cloud Providers
-- Implement Strava sync (activities, runs, rides)
-- Implement Fitbit sync (activity, sleep, heart rate)
-- Implement WHOOP sync (recovery, strain, sleep)
+### ~~PR5: Additional Cloud Providers~~ ✅ Complete
+- ✅ Implement Strava sync (activities, runs, rides)
+- ✅ Implement Fitbit sync (activity, sleep, heart rate)
+- ✅ Implement WHOOP sync (recovery, strain, sleep)
 
 ### PR6: Dashboard Integration
 - Query `daily_aggregates` view in Dashboard
