@@ -8,14 +8,16 @@ import { palette } from '../lib/tw';
 type Props = {
   title: string;
   value: ReactNode;
+  subtitle?: string; // NEW
   onPress?: () => void;
   icon?: ReactNode;
-  accentColor?: string; // NEW
+  accentColor?: string;
 };
 
 export default function StatCard({
   title,
   value,
+  subtitle,
   onPress,
   icon,
   accentColor = palette.accent, // default to pink
@@ -37,6 +39,7 @@ export default function StatCard({
       ) : (
         value
       )}
+      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
     </Container>
   );
 }
@@ -57,5 +60,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { fontWeight: '700', color: '#111827' },
-  value: { color: '#111827' },
+  value: { color: '#111827', fontSize: 16, fontWeight: '600' },
+  subtitle: { color: '#6b7280', fontSize: 12, marginTop: 4 },
 });

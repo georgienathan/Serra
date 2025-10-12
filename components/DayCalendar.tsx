@@ -47,7 +47,7 @@ export default function DayCalendar({
       .gte('day', startDate.toISOString().split('T')[0])
       .lte('day', endDate.toISOString().split('T')[0]);
 
-    // Build marks object
+    // Build marks object from manual entries
     const newMarks: MarkedDates = {};
     
     entries?.forEach(entry => {
@@ -60,6 +60,29 @@ export default function DayCalendar({
       // Only add dot if this category doesn't already have one for this day
       if (!newMarks[day].dots?.find((d) => d.key === entry.category)) {
         newMarks[day].dots?.push({ key: entry.category, color });
+      }
+    });
+
+    // Also get wearable data from daily_aggregates
+    const { data: aggregates } = await supabase
+      .from('daily_aggregates')
+      .select('day, total_steps, sleep_duration_minutes')
+      .eq('user_id', user.id)
+      .gte('day', startDate.toISOString().split('T')[0])
+      .lte('day', endDate.toISOString().split('T')[0]);
+
+    // Add wearable dots (using a distinct color)
+    aggregates?.forEach(agg => {
+      const day = agg.day;
+      if (!newMarks[day]) {
+        newMarks[day] = { dots: [] };
+      }
+      
+      // Add a wearable indicator dot if there's any data
+      if ((agg.total_steps && agg.total_steps > 0) || (agg.sleep_duration_minutes && agg.sleep_duration_minutes > 0)) {
+        if (!newMarks[day].dots?.find((d) => d.key === 'wearable')) {
+          newMarks[day].dots?.push({ key: 'wearable', color: '#3b82f6' }); // Blue for wearables
+        }
       }
     });
 

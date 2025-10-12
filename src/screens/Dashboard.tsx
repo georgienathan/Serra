@@ -25,6 +25,12 @@ export default function Dashboard() {
   const [hasPeriod, setHasPeriod] = useState<boolean>(false);
   const [nutritionCount, setNutritionCount] = useState<number>(0);
   const [exerciseCount, setExerciseCount] = useState<number>(0);
+  
+  // Wearable metrics
+  const [steps, setSteps] = useState<number>(0);
+  const [calories, setCalories] = useState<number>(0);
+  const [heartRate, setHeartRate] = useState<number>(0);
+  const [hasWearableData, setHasWearableData] = useState<boolean>(false);
 
   useEffect(() => {
     loadDataForDay(selectedDay);
@@ -34,6 +40,7 @@ export default function Dashboard() {
     const { data: u } = await supabase.auth.getUser();
     if (!u?.user) return;
 
+    // Load manual entries
     // sum selected day's sleep minutes
     const { data: sleepRows } = await supabase
       .from('entries')
@@ -42,8 +49,7 @@ export default function Dashboard() {
       .eq('category', 'sleep')
       .eq('day', day);
 
-    const total = (sleepRows ?? []).reduce((acc: number, r: any) => acc + (r.payload?.duration_min ?? 0), 0);
-    setSleepMin(total);
+    const manualSleepMin = (sleepRows ?? []).reduce((acc: number, r: any) => acc + (r.payload?.duration_min ?? 0), 0);
 
     // did we log period on selected day?
     const { data: periodRows } = await supabase
@@ -72,6 +78,33 @@ export default function Dashboard() {
       .eq('category', 'exercise')
       .eq('day', day);
     setExerciseCount((exerciseRows ?? []).length);
+
+    // Load wearable metrics from daily_aggregates view
+    const { data: aggregates } = await supabase
+      .from('daily_aggregates')
+      .select('*')
+      .eq('user_id', u.user.id)
+      .eq('day', day)
+      .single();
+
+    if (aggregates) {
+      setHasWearableData(true);
+      
+      // Combine manual sleep with wearable sleep
+      const wearableSleepMin = aggregates.sleep_duration_minutes || 0;
+      setSleepMin(Math.max(manualSleepMin, wearableSleepMin)); // Use the higher value
+      
+      // Set wearable metrics
+      setSteps(aggregates.total_steps || 0);
+      setCalories(aggregates.total_calories || 0);
+      setHeartRate(aggregates.avg_heart_rate ? Math.round(aggregates.avg_heart_rate) : 0);
+    } else {
+      setHasWearableData(false);
+      setSleepMin(manualSleepMin);
+      setSteps(0);
+      setCalories(0);
+      setHeartRate(0);
+    }
   }
 
   return (
@@ -118,6 +151,47 @@ export default function Dashboard() {
         icon={<FontAwesome5 name="dumbbell" size={16} color="white" />}
         onPress={() => nav.navigate('Exercise')}
       />
+
+      {/* Wearable Metrics - Only show if data available */}
+      {hasWearableData && (
+        <>
+          {/* Steps */}
+          {steps > 0 && (
+            <StatCard
+              title="Steps"
+              value={steps.toLocaleString()}
+              subtitle="From wearables"
+              accentColor={palette.green}
+              icon={<FontAwesome5 name="walking" size={16} color="white" />}
+              onPress={() => nav.navigate('Connections')}
+            />
+          )}
+
+          {/* Calories */}
+          {calories > 0 && (
+            <StatCard
+              title="Calories"
+              value={`${Math.round(calories)} kcal`}
+              subtitle="From wearables"
+              accentColor={palette.teal}
+              icon={<FontAwesome5 name="fire" size={16} color="white" />}
+              onPress={() => nav.navigate('Connections')}
+            />
+          )}
+
+          {/* Heart Rate */}
+          {heartRate > 0 && (
+            <StatCard
+              title="Heart Rate"
+              value={`${heartRate} bpm`}
+              subtitle="Average"
+              accentColor={palette.accent}
+              icon={<FontAwesome5 name="heartbeat" size={16} color="white" />}
+              onPress={() => nav.navigate('Connections')}
+            />
+          )}
+        </>
+      )}
 
       {/* AI Coach Card */}
       <AICoachCard />
