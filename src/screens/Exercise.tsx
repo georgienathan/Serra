@@ -20,7 +20,12 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
+import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
 
 /* ---------------------------------- Types --------------------------------- */
 
@@ -92,6 +97,11 @@ type FormVals = z.infer<typeof schema>;
 
 export default function Exercise() {
   const [message, setMessage] = useState<string | null>(null);
+  
+  // Upload state
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const [showReviewDrawer, setShowReviewDrawer] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [rows, setRows] = useState<ExerciseRow[]>([]);
 
@@ -118,6 +128,20 @@ export default function Exercise() {
 
   const day = watch('dateYMD');
   const typeWatch = watch('type');
+  
+  // Monitor attachment processing
+  const { status: attachmentStatus, extracted } = useAttachmentStatus(currentAttachmentId);
+  
+  // Handle attachment processing completion
+  React.useEffect(() => {
+    if (attachmentStatus === 'ready' && extracted) {
+      setExtractedData(extracted);
+      setShowReviewDrawer(true);
+    } else if (attachmentStatus === 'error') {
+      setMessage('AI processing failed. Please try again.');
+      setCurrentAttachmentId(null);
+    }
+  }, [attachmentStatus, extracted]);
 
   async function loadForDay(d: string) {
     setLoadingList(true);
@@ -232,6 +256,57 @@ export default function Exercise() {
     }
   }
 
+  // Upload handlers
+  const handleUploadStart = () => {
+    setMessage(null);
+  };
+
+  const handleUploadComplete = (attachmentId: string) => {
+    setCurrentAttachmentId(attachmentId);
+  };
+
+  const handleUploadError = (error: string) => {
+    setMessage(`Upload failed: ${error}`);
+  };
+
+  // Review drawer handlers
+  const handleFieldChange = (field: string, value: any) => {
+    setExtractedData((prev: any) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleApplyExtractedData = () => {
+    if (extractedData) {
+      // Convert extracted data to form values
+      const formData = {
+        type: extractedData.type || 'other',
+        duration: extractedData.duration_min?.toString() || '',
+        distance_km: extractedData.distance_km?.toString() || '',
+        steps: '', // Not extracted by AI
+        intensity: extractedData.intensity || undefined,
+        feeling: watch('feeling') || '🙂',
+        notes: extractedData.notes || '',
+        // Keep existing values for date/time
+        dateYMD: watch('dateYMD'),
+        timeHM: watch('timeHM')
+      };
+
+      reset(formData);
+      setShowReviewDrawer(false);
+      setCurrentAttachmentId(null);
+      setExtractedData(null);
+      setMessage('AI data applied to form. Please review and save.');
+    }
+  };
+
+  const handleCancelReview = () => {
+    setShowReviewDrawer(false);
+    setCurrentAttachmentId(null);
+    setExtractedData(null);
+  };
+
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Exercise</Text>
@@ -260,6 +335,24 @@ export default function Exercise() {
           {errors.timeHM && <Text style={styles.err}>{errors.timeHM.message}</Text>}
         </View>
       </View>
+
+      {/* AI Upload */}
+      <AttachmentUpload
+        category="exercise"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+        disabled={isSubmitting}
+      />
+
+      {/* Processing Banner */}
+      {currentAttachmentId && (
+        <ProcessingBanner
+          status={attachmentStatus}
+          error={attachmentStatus === 'error' ? 'Processing failed' : undefined}
+        />
+      )}
 
       {/* Type chips */}
       <Text style={styles.label}>Type</Text>
@@ -415,6 +508,16 @@ export default function Exercise() {
       )}
 
       <View style={{ height: 24 }} />
+      
+      {/* Extraction Review Drawer */}
+      <ExtractionReviewDrawer
+        visible={showReviewDrawer}
+        extracted={extractedData || {}}
+        category="exercise"
+        onApply={handleApplyExtractedData}
+        onCancel={handleCancelReview}
+        onFieldChange={handleFieldChange}
+      />
     </ScrollView>
   );
 }

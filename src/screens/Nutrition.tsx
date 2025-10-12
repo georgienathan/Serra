@@ -16,8 +16,13 @@ import TInput from '../../components/TInput';
 import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
+import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
 
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
 
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -62,6 +67,11 @@ export default function Nutrition() {
   const [message, setMessage] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [rows, setRows] = useState<NutritionRow[]>([]);
+  
+  // Upload state
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const [showReviewDrawer, setShowReviewDrawer] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const {
     control,
@@ -85,6 +95,20 @@ export default function Nutrition() {
   });
 
   const day = watch('dateYMD');
+  
+  // Monitor attachment processing
+  const { status: attachmentStatus, extracted } = useAttachmentStatus(currentAttachmentId);
+  
+  // Handle attachment processing completion
+  React.useEffect(() => {
+    if (attachmentStatus === 'ready' && extracted) {
+      setExtractedData(extracted);
+      setShowReviewDrawer(true);
+    } else if (attachmentStatus === 'error') {
+      setMessage('AI processing failed. Please try again.');
+      setCurrentAttachmentId(null);
+    }
+  }, [attachmentStatus, extracted]);
 
   async function loadForDay(d: string) {
     setLoadingList(true);
@@ -200,6 +224,57 @@ export default function Nutrition() {
     }
   }
 
+  // Upload handlers
+  const handleUploadStart = () => {
+    setMessage(null);
+  };
+
+  const handleUploadComplete = (attachmentId: string) => {
+    setCurrentAttachmentId(attachmentId);
+  };
+
+  const handleUploadError = (error: string) => {
+    setMessage(`Upload failed: ${error}`);
+  };
+
+  // Review drawer handlers
+  const handleFieldChange = (field: string, value: any) => {
+    setExtractedData((prev: any) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleApplyExtractedData = () => {
+    if (extractedData) {
+      // Convert extracted data to form values
+      const formData = {
+        calories: extractedData.calories?.toString() || '',
+        protein: extractedData.protein_g?.toString() || '',
+        carbs: extractedData.carbs_g?.toString() || '',
+        fat: extractedData.fat_g?.toString() || '',
+        notes: extractedData.notes || '',
+        // Keep existing values for date/time/feeling
+        dateYMD: watch('dateYMD'),
+        timeHM: watch('timeHM'),
+        feeling: watch('feeling') || '🙂',
+        ingredients: watch('ingredients') || ''
+      };
+
+      reset(formData);
+      setShowReviewDrawer(false);
+      setCurrentAttachmentId(null);
+      setExtractedData(null);
+      setMessage('AI data applied to form. Please review and save.');
+    }
+  };
+
+  const handleCancelReview = () => {
+    setShowReviewDrawer(false);
+    setCurrentAttachmentId(null);
+    setExtractedData(null);
+  };
+
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Nutrition</Text>
@@ -228,6 +303,24 @@ export default function Nutrition() {
           {errors.timeHM && <Text style={styles.err}>{errors.timeHM.message}</Text>}
         </View>
       </View>
+
+      {/* AI Upload */}
+      <AttachmentUpload
+        category="nutrition"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+        disabled={isSubmitting}
+      />
+
+      {/* Processing Banner */}
+      {currentAttachmentId && (
+        <ProcessingBanner
+          status={attachmentStatus}
+          error={attachmentStatus === 'error' ? 'Processing failed' : undefined}
+        />
+      )}
 
       {/* Ingredients */}
       <Controller
@@ -361,6 +454,16 @@ export default function Nutrition() {
       )}
 
       <View style={{ height: 24 }} />
+      
+      {/* Extraction Review Drawer */}
+      <ExtractionReviewDrawer
+        visible={showReviewDrawer}
+        extracted={extractedData || {}}
+        category="nutrition"
+        onApply={handleApplyExtractedData}
+        onCancel={handleCancelReview}
+        onFieldChange={handleFieldChange}
+      />
     </ScrollView>
   );
 }
