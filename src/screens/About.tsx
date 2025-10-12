@@ -8,11 +8,14 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import TInput from '../../components/TInput';
 import { palette } from '../../lib/tw';
 
 export default function About() {
+  const navigation = useNavigation<any>();
   const [email, setEmail] = useState<string>('');
   const [preferredName, setPreferredName] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -114,6 +117,24 @@ export default function About() {
 
       <View style={{ height: 24 }} />
 
+      {/* Wearables Connections */}
+      <Text style={styles.section}>Wearables & Devices</Text>
+      <Pressable
+        onPress={() => navigation.navigate('Connections')}
+        style={styles.connectionsButton}
+      >
+        <View style={styles.connectionsContent}>
+          <FontAwesome5 name="link" size={20} color={palette.teal} />
+          <View style={styles.connectionsText}>
+            <Text style={styles.connectionsTitle}>Connected Devices</Text>
+            <Text style={styles.connectionsSubtitle}>Sync data from Oura, Strava, Fitbit & more</Text>
+          </View>
+        </View>
+        <FontAwesome5 name="chevron-right" size={16} color={palette.text} style={{ opacity: 0.5 }} />
+      </Pressable>
+
+      <View style={{ height: 24 }} />
+
       {/* placeholders for future questionnaire editing */}
       <Text style={styles.section}>Questionnaire (coming soon)</Text>
       <Text style={{ color: palette.text, opacity: 0.85 }}>
@@ -146,4 +167,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  connectionsButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  connectionsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  connectionsText: {
+    flex: 1,
+  },
+  connectionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.text,
+    marginBottom: 2,
+  },
+  connectionsSubtitle: {
+    fontSize: 13,
+    color: palette.text,
+    opacity: 0.6,
+  },
 });

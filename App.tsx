@@ -19,6 +19,7 @@ import About from './src/screens/About';
 import Cycle from './src/screens/Cycle';
 import Nutrition from './src/screens/Nutrition';
 import Exercise from './src/screens/Exercise';
+import Connections from './src/screens/Connections';
 
 import { FontAwesome5 } from '@expo/vector-icons';
 import { palette } from './lib/tw'; 
@@ -112,6 +113,11 @@ const AppTabs = (
     <Tab.Screen name="Cycle" component={Cycle} />
     <Tab.Screen name="Nutrition" component={Nutrition} />
     <Tab.Screen name="Exercise" component={Exercise} />
+    <Tab.Screen 
+      name="Connections" 
+      component={Connections}
+      options={{ tabBarButton: () => null }} // Hidden from tab bar, accessed via About screen
+    />
   </Tab.Navigator>
 );
 
