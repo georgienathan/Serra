@@ -78,15 +78,18 @@ npm install expo-auth-session expo-secure-store expo-crypto
 
 ---
 
-### PR2: Oura Sync (`feature/oura-sync`)
+### ✅ PR2: Oura Sync (`feature/oura-sync`) - COMPLETE
 **Scope:**
-- Create `sync-oura` Edge Function
-- Implement Oura API client
-- Add Supabase cron job
-- Test end-to-end sync
+- ✅ Create `sync-provider` Edge Function (unified for all providers)
+- ✅ Implement Oura API client (sleep, daily, readiness)
+- ✅ Add token refresh logic
+- ✅ Add Supabase cron job
+- ✅ Test end-to-end sync
 
-**Files to Create:**
-- `supabase/functions/sync-oura/index.ts`
+**Files Created:**
+- `supabase/functions/sync-provider/index.ts`
+- `supabase/functions/_cron/sync-all-providers.ts`
+- `supabase/migrations/003_cron_jobs.sql`
 
 ---
 

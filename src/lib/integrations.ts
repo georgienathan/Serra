@@ -73,8 +73,8 @@ export async function syncProvider(provider: Provider): Promise<SyncResult> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data, error } = await supabase.functions.invoke(`sync-${provider}`, {
-    body: { userId: user.id }
+  const { data, error } = await supabase.functions.invoke('sync-provider', {
+    body: { provider, user_id: user.id }
   });
 
   if (error) {
