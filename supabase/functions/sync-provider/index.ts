@@ -397,22 +397,523 @@ async function upsertMetrics(supabase: any, metrics: any[]) {
 }
 
 // ============================================================================
-// STUB IMPLEMENTATIONS (for PR3+)
+// STRAVA SYNC
 // ============================================================================
 
 async function syncStrava(supabase: any, userId: string, accessToken: string) {
-  // TODO: Implement in PR3
-  return { metrics_inserted: 0, metrics_updated: 0 };
+  // Get last sync cursor
+  const { data: cursor } = await supabase
+    .from('sync_cursors')
+    .select('last_cursor')
+    .eq('user_id', userId)
+    .eq('provider', 'strava')
+    .single();
+
+  const lastSync = cursor?.last_cursor ? new Date(cursor.last_cursor).getTime() / 1000 : Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
+
+  let metricsInserted = 0;
+
+  // Sync Activities
+  const activities = await fetchStravaActivities(accessToken, lastSync);
+  for (const activity of activities) {
+    const normalized = normalizeStravaActivity(activity, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Update sync cursor
+  await supabase
+    .from('sync_cursors')
+    .upsert({
+      user_id: userId,
+      provider: 'strava',
+      last_cursor: new Date().toISOString().split('T')[0],
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,provider',
+    });
+
+  return { metrics_inserted: metricsInserted, metrics_updated: 0 };
 }
+
+async function fetchStravaActivities(accessToken: string, after: number) {
+  const url = `https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=100`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Strava API error: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+function normalizeStravaActivity(activity: any, userId: string) {
+  const day = activity.start_date.split('T')[0];
+  const timestamp = activity.start_date;
+
+  return [
+    {
+      user_id: userId,
+      provider: 'strava',
+      metric_type: 'workout_duration',
+      value: activity.moving_time / 60, // Convert seconds to minutes
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { 
+        activity_id: activity.id,
+        name: activity.name,
+        type: activity.type,
+      },
+    },
+    activity.distance && {
+      user_id: userId,
+      provider: 'strava',
+      metric_type: 'distance',
+      value: activity.distance / 1000, // Convert meters to km
+      unit: 'km',
+      timestamp,
+      day,
+      metadata: { activity_id: activity.id },
+    },
+    activity.calories && {
+      user_id: userId,
+      provider: 'strava',
+      metric_type: 'calories_active',
+      value: activity.calories,
+      unit: 'kcal',
+      timestamp,
+      day,
+      metadata: { activity_id: activity.id },
+    },
+    activity.average_heartrate && {
+      user_id: userId,
+      provider: 'strava',
+      metric_type: 'heart_rate_avg',
+      value: activity.average_heartrate,
+      unit: 'bpm',
+      timestamp,
+      day,
+      metadata: { activity_id: activity.id },
+    },
+  ].filter(Boolean);
+}
+
+// ============================================================================
+// FITBIT SYNC
+// ============================================================================
 
 async function syncFitbit(supabase: any, userId: string, accessToken: string) {
-  // TODO: Implement in PR3
-  return { metrics_inserted: 0, metrics_updated: 0 };
+  // Get last sync cursor
+  const { data: cursor } = await supabase
+    .from('sync_cursors')
+    .select('last_cursor')
+    .eq('user_id', userId)
+    .eq('provider', 'fitbit')
+    .single();
+
+  const lastSync = cursor?.last_cursor || getDefaultStartDate();
+  const today = new Date().toISOString().split('T')[0];
+
+  let metricsInserted = 0;
+
+  // Sync Activity (steps, calories)
+  const activityData = await fetchFitbitActivity(accessToken, lastSync, today);
+  if (activityData) {
+    const normalized = normalizeFitbitActivity(activityData, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Sync Sleep
+  const sleepData = await fetchFitbitSleep(accessToken, lastSync, today);
+  for (const sleep of sleepData) {
+    const normalized = normalizeFitbitSleep(sleep, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Sync Heart Rate
+  const heartRateData = await fetchFitbitHeartRate(accessToken, lastSync, today);
+  if (heartRateData) {
+    const normalized = normalizeFitbitHeartRate(heartRateData, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Update sync cursor
+  await supabase
+    .from('sync_cursors')
+    .upsert({
+      user_id: userId,
+      provider: 'fitbit',
+      last_cursor: today,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,provider',
+    });
+
+  return { metrics_inserted: metricsInserted, metrics_updated: 0 };
 }
 
+async function fetchFitbitActivity(accessToken: string, startDate: string, endDate: string) {
+  const url = `https://api.fitbit.com/1/user/-/activities/date/${startDate}/${endDate}.json`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fitbit API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.summary;
+}
+
+async function fetchFitbitSleep(accessToken: string, startDate: string, endDate: string) {
+  const url = `https://api.fitbit.com/1.2/user/-/sleep/date/${startDate}/${endDate}.json`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fitbit API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.sleep || [];
+}
+
+async function fetchFitbitHeartRate(accessToken: string, startDate: string, endDate: string) {
+  const url = `https://api.fitbit.com/1/user/-/activities/heart/date/${startDate}/${endDate}.json`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fitbit API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data['activities-heart'];
+}
+
+function normalizeFitbitActivity(activity: any, userId: string) {
+  const day = new Date().toISOString().split('T')[0];
+  const timestamp = `${day}T12:00:00Z`;
+
+  return [
+    activity.steps && {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'steps',
+      value: activity.steps,
+      unit: 'count',
+      timestamp,
+      day,
+      metadata: {},
+    },
+    activity.caloriesOut && {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'calories_total',
+      value: activity.caloriesOut,
+      unit: 'kcal',
+      timestamp,
+      day,
+      metadata: {},
+    },
+    activity.activityCalories && {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'calories_active',
+      value: activity.activityCalories,
+      unit: 'kcal',
+      timestamp,
+      day,
+      metadata: {},
+    },
+  ].filter(Boolean);
+}
+
+function normalizeFitbitSleep(sleep: any, userId: string) {
+  const day = sleep.dateOfSleep;
+  const timestamp = sleep.startTime;
+
+  return [
+    {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'sleep_duration',
+      value: sleep.duration / 60000, // Convert ms to minutes
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { 
+        sleep_id: sleep.logId,
+        efficiency: sleep.efficiency,
+      },
+    },
+    sleep.levels?.summary?.deep?.minutes && {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'sleep_deep',
+      value: sleep.levels.summary.deep.minutes,
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { sleep_id: sleep.logId },
+    },
+    sleep.levels?.summary?.rem?.minutes && {
+      user_id: userId,
+      provider: 'fitbit',
+      metric_type: 'sleep_rem',
+      value: sleep.levels.summary.rem.minutes,
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { sleep_id: sleep.logId },
+    },
+  ].filter(Boolean);
+}
+
+function normalizeFitbitHeartRate(heartRate: any, userId: string) {
+  const metrics: any[] = [];
+
+  for (const day of heartRate) {
+    const dayStr = day.dateTime;
+    const timestamp = `${dayStr}T12:00:00Z`;
+
+    if (day.value?.restingHeartRate) {
+      metrics.push({
+        user_id: userId,
+        provider: 'fitbit',
+        metric_type: 'heart_rate_resting',
+        value: day.value.restingHeartRate,
+        unit: 'bpm',
+        timestamp,
+        day: dayStr,
+        metadata: {},
+      });
+    }
+  }
+
+  return metrics;
+}
+
+// ============================================================================
+// WHOOP SYNC
+// ============================================================================
+
 async function syncWhoop(supabase: any, userId: string, accessToken: string) {
-  // TODO: Implement in PR3
-  return { metrics_inserted: 0, metrics_updated: 0 };
+  // Get last sync cursor
+  const { data: cursor } = await supabase
+    .from('sync_cursors')
+    .select('last_cursor')
+    .eq('user_id', userId)
+    .eq('provider', 'whoop')
+    .single();
+
+  const lastSync = cursor?.last_cursor || getDefaultStartDate();
+  const today = new Date().toISOString();
+
+  let metricsInserted = 0;
+
+  // Sync Sleep
+  const sleepData = await fetchWhoopSleep(accessToken, lastSync, today);
+  for (const sleep of sleepData) {
+    const normalized = normalizeWhoopSleep(sleep, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Sync Recovery
+  const recoveryData = await fetchWhoopRecovery(accessToken, lastSync, today);
+  for (const recovery of recoveryData) {
+    const normalized = normalizeWhoopRecovery(recovery, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Sync Workouts
+  const workoutData = await fetchWhoopWorkouts(accessToken, lastSync, today);
+  for (const workout of workoutData) {
+    const normalized = normalizeWhoopWorkout(workout, userId);
+    const { error } = await upsertMetrics(supabase, normalized);
+    if (!error) metricsInserted++;
+  }
+
+  // Update sync cursor
+  await supabase
+    .from('sync_cursors')
+    .upsert({
+      user_id: userId,
+      provider: 'whoop',
+      last_cursor: new Date().toISOString().split('T')[0],
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,provider',
+    });
+
+  return { metrics_inserted: metricsInserted, metrics_updated: 0 };
+}
+
+async function fetchWhoopSleep(accessToken: string, start: string, end: string) {
+  const url = `https://api.prod.whoop.com/developer/v1/activity/sleep?start=${start}&end=${end}`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`WHOOP API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.records || [];
+}
+
+async function fetchWhoopRecovery(accessToken: string, start: string, end: string) {
+  const url = `https://api.prod.whoop.com/developer/v1/recovery?start=${start}&end=${end}`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`WHOOP API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.records || [];
+}
+
+async function fetchWhoopWorkouts(accessToken: string, start: string, end: string) {
+  const url = `https://api.prod.whoop.com/developer/v1/activity/workout?start=${start}&end=${end}`;
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`WHOOP API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.records || [];
+}
+
+function normalizeWhoopSleep(sleep: any, userId: string) {
+  const day = sleep.start.split('T')[0];
+  const timestamp = sleep.start;
+
+  return [
+    {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'sleep_duration',
+      value: sleep.score?.total_in_bed_time_milli / 60000, // Convert ms to minutes
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { 
+        sleep_id: sleep.id,
+        sleep_performance_percentage: sleep.score?.sleep_performance_percentage,
+      },
+    },
+    sleep.score?.stage_summary?.total_slow_wave_sleep_time_milli && {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'sleep_deep',
+      value: sleep.score.stage_summary.total_slow_wave_sleep_time_milli / 60000,
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { sleep_id: sleep.id },
+    },
+    sleep.score?.stage_summary?.total_rem_sleep_time_milli && {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'sleep_rem',
+      value: sleep.score.stage_summary.total_rem_sleep_time_milli / 60000,
+      unit: 'minutes',
+      timestamp,
+      day,
+      metadata: { sleep_id: sleep.id },
+    },
+  ].filter(Boolean);
+}
+
+function normalizeWhoopRecovery(recovery: any, userId: string) {
+  const day = recovery.created_at.split('T')[0];
+  const timestamp = recovery.created_at;
+
+  return [
+    {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'recovery_score',
+      value: recovery.score?.recovery_score,
+      unit: 'score',
+      timestamp,
+      day,
+      metadata: { 
+        recovery_id: recovery.id,
+        hrv: recovery.score?.hrv_rmssd_milli,
+        resting_hr: recovery.score?.resting_heart_rate,
+      },
+    },
+    recovery.score?.hrv_rmssd_milli && {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'hrv',
+      value: recovery.score.hrv_rmssd_milli,
+      unit: 'ms',
+      timestamp,
+      day,
+      metadata: { recovery_id: recovery.id },
+    },
+    recovery.score?.resting_heart_rate && {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'heart_rate_resting',
+      value: recovery.score.resting_heart_rate,
+      unit: 'bpm',
+      timestamp,
+      day,
+      metadata: { recovery_id: recovery.id },
+    },
+  ].filter(Boolean);
+}
+
+function normalizeWhoopWorkout(workout: any, userId: string) {
+  const day = workout.start.split('T')[0];
+  const timestamp = workout.start;
+
+  return [
+    {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'workout_strain',
+      value: workout.score?.strain,
+      unit: 'score',
+      timestamp,
+      day,
+      metadata: { 
+        workout_id: workout.id,
+        sport: workout.sport_id,
+      },
+    },
+    workout.score?.kilojoule && {
+      user_id: userId,
+      provider: 'whoop',
+      metric_type: 'calories_active',
+      value: workout.score.kilojoule * 0.239006, // Convert kJ to kcal
+      unit: 'kcal',
+      timestamp,
+      day,
+      metadata: { workout_id: workout.id },
+    },
+  ].filter(Boolean);
 }
 
 // ============================================================================
