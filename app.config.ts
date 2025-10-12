@@ -24,5 +24,24 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
         microphonePermission: 'The app accesses your microphone to record voice notes for nutrition and exercise data.',
       },
     ],
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          deploymentTarget: '13.4',
+        },
+      },
+    ],
   ],
+  ios: {
+    bundleIdentifier: 'com.serraactive.app',
+    infoPlist: {
+      NSHealthShareUsageDescription: 'Serra needs access to your health data to sync workouts, sleep, and activity metrics.',
+      NSHealthUpdateUsageDescription: 'Serra needs permission to write workout data to Apple Health.',
+    },
+    entitlements: {
+      'com.apple.developer.healthkit': true,
+      'com.apple.developer.healthkit.access': [],
+    },
+  },
 });

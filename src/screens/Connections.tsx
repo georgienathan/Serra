@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { palette } from '../../lib/tw';
 import { supabase } from '../lib/supabase';
 import {
@@ -21,6 +22,7 @@ import {
   syncProvider,
 } from '../lib/integrations';
 import { Provider, SourceAccount } from '../types/integrations';
+import { initHealthKit, syncHealthKit, isHealthKitAvailable } from '../integrations/healthkit';
 
 interface ProviderConfig {
   id: Provider;
@@ -102,11 +104,15 @@ export default function Connections() {
 
   async function handleConnect(provider: Provider, isLocal: boolean) {
     if (isLocal) {
-      // Local providers (HealthKit/Health Connect) - coming in PR3/PR4
-      Alert.alert(
-        'Coming Soon',
-        `${provider === 'apple_health' ? 'Apple Health' : 'Health Connect'} integration will be available in the next update.`
-      );
+      // Local providers (HealthKit/Health Connect)
+      if (provider === 'apple_health') {
+        await handleConnectHealthKit();
+      } else if (provider === 'health_connect') {
+        Alert.alert(
+          'Coming Soon',
+          'Health Connect integration will be available in the next update.'
+        );
+      }
       return;
     }
 
@@ -164,19 +170,60 @@ export default function Connections() {
     );
   }
 
-  async function handleSync(provider: Provider) {
+  async function handleConnectHealthKit() {
     try {
-      setSyncing(provider);
-      const result = await syncProvider(provider);
+      if (!isHealthKitAvailable()) {
+        Alert.alert('Not Available', 'HealthKit is not available on this device');
+        return;
+      }
+
+      // Initialize and request permissions
+      await initHealthKit();
+      
+      // Perform initial sync
+      const result = await syncHealthKit();
       
       if (result.success) {
-        Alert.alert(
-          'Sync Complete',
-          `Synced ${result.metrics_inserted + result.metrics_updated} metrics`
-        );
+        Alert.alert('Connected!', `Synced ${result.metrics_inserted} metrics from Apple Health`);
         await loadAccounts();
       } else {
         Alert.alert('Sync Failed', result.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      console.error('HealthKit connection error:', error);
+      Alert.alert('Error', error.message || 'Failed to connect to HealthKit');
+    }
+  }
+
+  async function handleSync(provider: Provider) {
+    try {
+      setSyncing(provider);
+      
+      // Local providers use different sync logic
+      if (provider === 'apple_health') {
+        const result = await syncHealthKit();
+        if (result.success) {
+          Alert.alert(
+            'Sync Complete',
+            `Synced ${result.metrics_inserted} metrics from Apple Health`
+          );
+          await loadAccounts();
+        } else {
+          Alert.alert('Sync Failed', result.error || 'Unknown error');
+        }
+      } else {
+        // Cloud providers
+        const result = await syncProvider(provider);
+        
+        if (result.success) {
+          Alert.alert(
+            'Sync Complete',
+            `Synced ${result.metrics_inserted + result.metrics_updated} metrics`
+          );
+          await loadAccounts();
+        } else {
+          Alert.alert('Sync Failed', result.error || 'Unknown error');
+        }
       }
     } catch (error: any) {
       console.error('Sync error:', error);
