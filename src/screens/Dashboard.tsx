@@ -83,9 +83,6 @@ export default function Dashboard() {
         categories={['nutrition', 'exercise', 'period', 'sleep']}
       />
 
-      {/* AI Coach Card */}
-      <AICoachCard />
-
       {/* Cycle → Period subtab */}
       <StatCard
         title="Period"
@@ -121,6 +118,9 @@ export default function Dashboard() {
         icon={<FontAwesome5 name="dumbbell" size={16} color="white" />}
         onPress={() => nav.navigate('Exercise')}
       />
+
+      {/* AI Coach Card */}
+      <AICoachCard />
     </View>
   );
 }
