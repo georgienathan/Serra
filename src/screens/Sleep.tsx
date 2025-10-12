@@ -20,6 +20,7 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
+import DayCalendar from '../../components/DayCalendar';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
 
 type Quality = 'poor' | 'ok' | 'good';
@@ -80,6 +81,7 @@ export default function Sleep() {
     watch,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -200,6 +202,16 @@ export default function Sleep() {
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Sleep</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['period', 'sleep']}
+      />
 
       <Controller control={control} name="dateYMD" render={({ field: { value, onChange } }) => (
         <TDateInput label="Wake date" value={value} onChange={onChange} />

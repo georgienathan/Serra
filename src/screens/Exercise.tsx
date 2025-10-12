@@ -23,6 +23,7 @@ import TChip from '../../components/TChip';
 import AttachmentUpload from '../../components/AttachmentUpload';
 import ProcessingBanner from '../../components/ProcessingBanner';
 import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
+import DayCalendar from '../../components/DayCalendar';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
 import { uploadAndProcess } from '../lib/attachments';
 import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
@@ -111,6 +112,7 @@ export default function Exercise() {
     watch,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -311,6 +313,16 @@ export default function Exercise() {
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Exercise</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['exercise']}
+      />
 
       {/* Date + Time */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>

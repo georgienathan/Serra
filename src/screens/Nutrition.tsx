@@ -19,6 +19,7 @@ import TTimeInput from '../../components/TTimeInput';
 import AttachmentUpload from '../../components/AttachmentUpload';
 import ProcessingBanner from '../../components/ProcessingBanner';
 import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
+import DayCalendar from '../../components/DayCalendar';
 
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
 import { uploadAndProcess } from '../lib/attachments';
@@ -79,6 +80,7 @@ export default function Nutrition() {
     formState: { errors, isSubmitting },
     reset,
     watch,
+    setValue,
   } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -279,6 +281,16 @@ export default function Nutrition() {
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Nutrition</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['nutrition']}
+      />
 
       {/* Date + Time */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>

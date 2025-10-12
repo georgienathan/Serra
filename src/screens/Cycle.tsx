@@ -21,6 +21,7 @@ import TInput from '../../components/TInput';
 import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TChip from '../../components/TChip';
+import DayCalendar from '../../components/DayCalendar';
 
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -136,6 +137,7 @@ function PeriodScreen() {
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<PeriodVals>({
     resolver: zodResolver(periodSchema),
@@ -255,6 +257,16 @@ function PeriodScreen() {
     <ScrollView contentContainerStyle={{ padding: 12 }}>
       <Text style={styles.title}>Period</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['period', 'sleep']}
+      />
 
       {/* Date */}
       <Controller
