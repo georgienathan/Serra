@@ -8,5 +8,21 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+    storageBucket: 'uploads',
   },
+  plugins: [
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'The app accesses your photos to upload nutrition and exercise data.',
+        cameraPermission: 'The app accesses your camera to capture nutrition and exercise data.',
+      },
+    ],
+    [
+      'expo-av',
+      {
+        microphonePermission: 'The app accesses your microphone to record voice notes for nutrition and exercise data.',
+      },
+    ],
+  ],
 });
