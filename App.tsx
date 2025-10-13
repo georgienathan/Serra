@@ -108,8 +108,8 @@ const AppTabs = (
       ),
     })}
   >
-    <Tab.Screen name="Dashboard" component={Dashboard} />
     <Tab.Screen name="About" component={About} />
+    <Tab.Screen name="Dashboard" component={Dashboard} />
     <Tab.Screen name="Cycle" component={Cycle} />
     <Tab.Screen name="Nutrition" component={Nutrition} />
     <Tab.Screen name="Exercise" component={Exercise} />

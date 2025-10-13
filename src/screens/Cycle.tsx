@@ -22,10 +22,14 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TChip from '../../components/TChip';
 import DayCalendar from '../../components/DayCalendar';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
 
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
 
 /* --------------------------- constants / types --------------------------- */
 type TabKey = 'period' | 'sleep';
@@ -132,6 +136,9 @@ function NavItem({
 /* ------------------------------- Period tab ------------------------------ */
 
 function PeriodScreen() {
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const attachmentStatus = useAttachmentStatus(currentAttachmentId);
+  
   const {
     control,
     handleSubmit,
@@ -201,6 +208,19 @@ function PeriodScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day]);
 
+  function handleUploadStart() {
+    setMessage('Uploading...');
+  }
+
+  function handleUploadComplete(attachmentId: string) {
+    setCurrentAttachmentId(attachmentId);
+    setMessage('Processing...');
+  }
+
+  function handleUploadError(error: string) {
+    setMessage(error);
+  }
+
   const onSubmit = async (v: PeriodVals) => {
     try {
       setMessage(null);
@@ -255,8 +275,20 @@ function PeriodScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <Text style={styles.title}>Period</Text>
+      <Text style={styles.title}>PERIOD</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Upload Photo or Voice Note */}
+      <AttachmentUpload 
+        category="period"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+      />
+      {currentAttachmentId && attachmentStatus && (
+        <ProcessingBanner status={attachmentStatus.status} />
+      )}
 
       {/* Calendar */}
       <DayCalendar
