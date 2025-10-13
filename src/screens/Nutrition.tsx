@@ -279,7 +279,7 @@ export default function Nutrition() {
 
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Nutrition</Text>
+      <Text style={styles.title}>NUTRITION</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
 
       {/* Calendar */}
@@ -424,7 +424,7 @@ export default function Nutrition() {
       />
 
       {/* Save */}
-      <TButton title="Save entry" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE ENTRY" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Totals */}
       <View style={{ height: 16 }} />

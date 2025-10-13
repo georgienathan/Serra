@@ -414,7 +414,7 @@ export default function Sleep() {
         Estimated duration: <Text style={{ fontWeight: '700' }}>{previewHours} h</Text>
       </Text>
 
-      <TButton title="Save sleep" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE SLEEP" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       <View style={{ height: 16 }} />
       <Text style={styles.section}>Total for {day}</Text>

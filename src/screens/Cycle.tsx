@@ -478,7 +478,7 @@ function PeriodScreen() {
       />
 
       {/* Save */}
-      <TButton title="Save period entry" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE PERIOD ENTRY" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Entries list */}
       <View style={{ height: 16 }} />

@@ -343,7 +343,7 @@ export default function Exercise() {
 
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Exercise</Text>
+      <Text style={styles.title}>EXERCISE</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
 
       {/* Calendar */}
@@ -566,7 +566,7 @@ export default function Exercise() {
         </View>
       </View>
 
-      <TButton title="Save workout" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE WORKOUT" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Totals */}
       <View style={{ height: 16 }} />

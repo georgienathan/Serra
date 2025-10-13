@@ -91,7 +91,7 @@ export default function About() {
       contentContainerStyle={{ padding: 16, gap: 8 }}
       style={{ backgroundColor: palette.background }}
     >
-      <Text style={styles.title}>About</Text>
+      <Text style={styles.title}>ABOUT</Text>
 
       {!!message && <Text style={styles.msg}>{message}</Text>}
 
@@ -112,7 +112,7 @@ export default function About() {
         disabled={saving}
         style={[styles.saveBtn, saving && { opacity: 0.6 }]}
       >
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>SAVE</Text>}
       </Pressable>
 
       <View style={{ height: 24 }} />

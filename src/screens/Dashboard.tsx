@@ -118,7 +118,7 @@ export default function Dashboard() {
 
       {/* Cycle → Period subtab */}
       <StatCard
-        title="Period"
+        title="PERIOD"
         value={hasPeriod ? 'Logged' : 'Not logged'}
         accentColor={palette.accent}
         icon={<FontAwesome5 name="tint" size={16} color="white" />}
@@ -127,7 +127,7 @@ export default function Dashboard() {
 
       {/* Cycle → Sleep subtab */}
       <StatCard
-        title="Sleep"
+        title="SLEEP"
         value={`${(sleepMin / 60).toFixed(1)} hours`}
         accentColor={palette.accent}
         icon={<FontAwesome5 name="moon" size={16} color="white" />}
@@ -136,7 +136,7 @@ export default function Dashboard() {
 
       {/* Nutrition */}
       <StatCard
-        title="Nutrition"
+        title="NUTRITION"
         value={`${nutritionCount} ${nutritionCount === 1 ? 'entry' : 'entries'}`}
         accentColor={palette.green}
         icon={<FontAwesome5 name="apple-alt" size={16} color="white" />}
@@ -145,7 +145,7 @@ export default function Dashboard() {
 
       {/* Exercise */}
       <StatCard
-        title="Exercise"
+        title="EXERCISE"
         value={`${exerciseCount} ${exerciseCount === 1 ? 'session' : 'sessions'}`}
         accentColor={palette.teal}
         icon={<FontAwesome5 name="dumbbell" size={16} color="white" />}
@@ -158,7 +158,7 @@ export default function Dashboard() {
           {/* Steps */}
           {steps > 0 && (
             <StatCard
-              title="Steps"
+              title="STEPS"
               value={steps.toLocaleString()}
               subtitle="From wearables"
               accentColor={palette.green}
@@ -170,7 +170,7 @@ export default function Dashboard() {
           {/* Calories */}
           {calories > 0 && (
             <StatCard
-              title="Calories"
+              title="CALORIES"
               value={`${Math.round(calories)} kcal`}
               subtitle="From wearables"
               accentColor={palette.teal}
@@ -182,7 +182,7 @@ export default function Dashboard() {
           {/* Heart Rate */}
           {heartRate > 0 && (
             <StatCard
-              title="Heart Rate"
+              title="HEART RATE"
               value={`${heartRate} bpm`}
               subtitle="Average"
               accentColor={palette.accent}
