@@ -27,6 +27,7 @@ import DayCalendar from '../../components/DayCalendar';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
 import { uploadAndProcess } from '../lib/attachments';
 import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
+import { getExerciseMetricsForDay } from '../lib/wearable-helpers';
 
 /* ---------------------------------- Types --------------------------------- */
 
@@ -64,6 +65,11 @@ type ExercisePayload = {
   intensity?: Intensity | null;
   feeling?: Feeling | null;
   notes?: string | null;
+  // Wearable metrics (optional)
+  calories?: number | null;
+  avg_hr?: number | null;
+  max_hr?: number | null;
+  strain?: number | null;
 };
 
 type ExerciseRow = { id: string; ts: string | null; payload: ExercisePayload };
@@ -91,6 +97,11 @@ const schema = z.object({
   intensity: z.enum(INTENSITIES).optional(),
   feeling: z.enum(FEELINGS).optional(),
   notes: z.string().optional(),
+  // Wearable metrics (optional)
+  calories: numStr,
+  avg_hr: numStr,
+  max_hr: numStr,
+  strain: numStr,
 });
 type FormVals = z.infer<typeof schema>;
 
@@ -177,6 +188,22 @@ export default function Exercise() {
       payload: (r.payload ?? {}) as ExercisePayload,
     }));
     setRows(mapped);
+
+    // Load wearable data and pre-populate form fields
+    const wearableData = await getExerciseMetricsForDay(d);
+    if (wearableData.duration_min > 0 || wearableData.calories > 0) {
+      // Pre-populate wearable fields if data exists
+      setValue('calories', wearableData.calories > 0 ? wearableData.calories.toString() : '');
+      setValue('avg_hr', wearableData.avg_hr > 0 ? Math.round(wearableData.avg_hr).toString() : '');
+      setValue('max_hr', wearableData.max_hr > 0 ? Math.round(wearableData.max_hr).toString() : '');
+      setValue('strain', wearableData.strain > 0 ? wearableData.strain.toFixed(1) : '');
+      
+      // Also pre-populate distance if available
+      if (wearableData.distance_km > 0) {
+        setValue('distance_km', wearableData.distance_km.toFixed(2));
+      }
+    }
+
     setLoadingList(false);
   }
 
@@ -214,6 +241,11 @@ export default function Exercise() {
         intensity: v.intensity ?? null,
         feeling: v.feeling ?? null,
         notes: v.notes?.trim() || null,
+        // Include wearable metrics if provided
+        calories: toNum(v.calories),
+        avg_hr: toNum(v.avg_hr),
+        max_hr: toNum(v.max_hr),
+        strain: toNum(v.strain),
       };
 
       const { data: u } = await supabase.auth.getUser();
@@ -477,6 +509,63 @@ export default function Exercise() {
         )}
       />
 
+      {/* Wearable Metrics Section */}
+      <View style={{ height: 16 }} />
+      <Text style={styles.section}>Wearable Data (auto-populated)</Text>
+      <Text style={{ color: palette.text, opacity: 0.7, fontSize: 12, marginBottom: 8 }}>
+        These fields are automatically filled from your wearables. You can edit them manually.
+      </Text>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Calories</Text>
+          <Controller control={control} name="calories" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Avg HR (bpm)</Text>
+          <Controller control={control} name="avg_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Max HR (bpm)</Text>
+          <Controller control={control} name="max_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Strain</Text>
+          <Controller control={control} name="strain" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0.0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
       <TButton title="Save workout" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Totals */}
@@ -514,6 +603,16 @@ export default function Exercise() {
               {e.intensity && <Text style={styles.text}>Intensity: {e.intensity}</Text>}
               {e.feeling && <Text style={styles.text}>Feeling: {e.feeling}</Text>}
               {e.notes ? <Text style={styles.text}>Notes: {e.notes}</Text> : null}
+              {/* Display wearable metrics if available */}
+              {(e.calories || e.avg_hr || e.max_hr || e.strain) && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={{ ...styles.text, fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Wearable Data:</Text>
+                  {e.calories && <Text style={{ ...styles.text, fontSize: 12 }}>Calories: {e.calories} kcal</Text>}
+                  {e.avg_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Avg HR: {e.avg_hr} bpm</Text>}
+                  {e.max_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Max HR: {e.max_hr} bpm</Text>}
+                  {e.strain && <Text style={{ ...styles.text, fontSize: 12 }}>Strain: {e.strain}</Text>}
+                </View>
+              )}
             </View>
           );
         })

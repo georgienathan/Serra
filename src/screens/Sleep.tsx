@@ -22,6 +22,7 @@ import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
 import DayCalendar from '../../components/DayCalendar';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
+import { getSleepMetricsForDay } from '../lib/wearable-helpers';
 
 type Quality = 'poor' | 'ok' | 'good';
 type Feeling = '🙂' | '😐' | '☹️';
@@ -33,6 +34,12 @@ type SleepPayload = {
   quality?: Quality | null;
   feeling?: Feeling | null;
   notes?: string | null;
+  // Wearable metrics (optional)
+  deep_min?: number | null;
+  rem_min?: number | null;
+  sleep_score?: number | null;
+  resting_hr?: number | null;
+  hrv?: number | null;
 };
 
 type SleepRow = { id: string; ts: string | null; payload: SleepPayload };
@@ -48,6 +55,12 @@ const schema = z.object({
   quality: z.enum(QUALITIES).optional(),
   feeling: z.enum(FEELINGS).optional(),
   notes: z.string().optional(),
+  // Wearable metrics (optional)
+  deep_min: z.number().optional(),
+  rem_min: z.number().optional(),
+  sleep_score: z.number().optional(),
+  resting_hr: z.number().optional(),
+  hrv: z.number().optional(),
 });
 type FormVals = z.infer<typeof schema>;
 
@@ -131,6 +144,18 @@ export default function Sleep() {
     }));
 
     setRows(mapped);
+
+    // Load wearable data and pre-populate form fields
+    const wearableData = await getSleepMetricsForDay(d);
+    if (wearableData.duration_min > 0 || wearableData.deep_min > 0 || wearableData.rem_min > 0) {
+      // Pre-populate wearable fields if data exists
+      setValue('deep_min', wearableData.deep_min || undefined);
+      setValue('rem_min', wearableData.rem_min || undefined);
+      setValue('sleep_score', wearableData.sleep_score || undefined);
+      setValue('resting_hr', wearableData.resting_hr || undefined);
+      setValue('hrv', wearableData.hrv || undefined);
+    }
+
     setLoadingList(false);
   }
 
@@ -161,6 +186,12 @@ export default function Sleep() {
         quality: v.quality ?? null,
         feeling: v.feeling ?? null,
         notes: v.notes?.trim() || null,
+        // Include wearable metrics if provided
+        deep_min: v.deep_min ?? null,
+        rem_min: v.rem_min ?? null,
+        sleep_score: v.sleep_score ?? null,
+        resting_hr: v.resting_hr ?? null,
+        hrv: v.hrv ?? null,
       };
 
       const { data: u } = await supabase.auth.getUser();
@@ -259,6 +290,73 @@ export default function Sleep() {
         <TInput placeholder="Notes (optional)" value={value ?? ''} onChangeText={onChange} />
       )} />
 
+      {/* Wearable Metrics Section */}
+      <View style={{ height: 16 }} />
+      <Text style={styles.section}>Wearable Data (auto-populated)</Text>
+      <Text style={{ color: palette.text, opacity: 0.7, fontSize: 12, marginBottom: 8 }}>
+        These fields are automatically filled from your wearables. You can edit them manually.
+      </Text>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Deep sleep (min)</Text>
+          <Controller control={control} name="deep_min" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>REM sleep (min)</Text>
+          <Controller control={control} name="rem_min" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Sleep score</Text>
+          <Controller control={control} name="sleep_score" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0-100" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Resting HR (bpm)</Text>
+          <Controller control={control} name="resting_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <Text style={styles.label}>HRV (ms)</Text>
+      <Controller control={control} name="hrv" render={({ field: { value, onChange } }) => (
+        <TInput 
+          placeholder="0" 
+          value={value?.toString() ?? ''} 
+          onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+          keyboardType="numeric"
+        />
+      )} />
+
       <Text style={{ color: palette.text, marginVertical: 8 }}>
         Estimated duration: <Text style={{ fontWeight: '700' }}>{previewHours} h</Text>
       </Text>
@@ -293,6 +391,17 @@ export default function Sleep() {
               {e.quality && <Text style={styles.text}>Quality: {e.quality}</Text>}
               {e.feeling && <Text style={styles.text}>Feeling: {e.feeling}</Text>}
               {e.notes ? <Text style={styles.text}>Notes: {e.notes}</Text> : null}
+              {/* Display wearable metrics if available */}
+              {(e.deep_min || e.rem_min || e.sleep_score || e.resting_hr || e.hrv) && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={{ ...styles.text, fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Wearable Data:</Text>
+                  {e.deep_min && <Text style={{ ...styles.text, fontSize: 12 }}>Deep: {e.deep_min} min</Text>}
+                  {e.rem_min && <Text style={{ ...styles.text, fontSize: 12 }}>REM: {e.rem_min} min</Text>}
+                  {e.sleep_score && <Text style={{ ...styles.text, fontSize: 12 }}>Score: {e.sleep_score}</Text>}
+                  {e.resting_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Resting HR: {e.resting_hr} bpm</Text>}
+                  {e.hrv && <Text style={{ ...styles.text, fontSize: 12 }}>HRV: {e.hrv} ms</Text>}
+                </View>
+              )}
             </View>
           );
         })
