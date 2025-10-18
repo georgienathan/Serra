@@ -16,11 +16,20 @@ regexes = [
     '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd2JvY21rb2JkbG9zY2llYnlhIiw.*'''
 ]
 
-# Ignore files that contain only documentation examples
+# Ignore entire documentation files that contain only examples
 [[gitleaks.allowlist]]
 description = "Ignore documentation files with examples"
 files = [
     '''README\.md''',
     '''ENV_SETUP\.md''',
     '''WEARABLES_INTEGRATION\.md''',
+]
+
+# Ignore specific commits that contain only documentation examples
+[[gitleaks.allowlist]]
+description = "Ignore commits with documentation examples"
+commits = [
+    '''66c01342e6dc6ef2ec54a5fe15b431e7cb961ca6''',
+    '''feca4de1b92f7505dd1df69b804924a134f8888b''',
+    '''1dc6308e38e4e90e152c49fab0ce3a76d072b510''',
 ]
