@@ -244,7 +244,7 @@ getLatestMetric(type: MetricType, provider?: Provider): Promise<Metric | null>
   day: "2024-01-15",
   value: 420, // minutes
   unit: "min",
-  source_key: "oura_sleep_abc123",
+  source_key: "oura_sleep_[REDACTED]",
   payload: {
     deep_min: 90,
     light_min: 200,
