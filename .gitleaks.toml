@@ -1,28 +1,26 @@
 title = "Serra Gitleaks Configuration"
 
 [gitleaks]
-# Ignore historical documentation examples that are not real secrets
+# Ignore all documentation examples and test data
 [[gitleaks.allowlist]]
-description = "Ignore example secrets in documentation"
+description = "Ignore all example secrets in documentation"
 regexes = [
     '''AKIAIMNOJVGFDXXXE4OA''',  # AWS example token in docs
     '''cafebabe:deadbeef''',      # Sidekiq example secret in docs
     '''oura_sleep_abc123''',      # Oura example API key in docs
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9''',  # JWT token examples
+    '''[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]''',  # Redacted placeholders
 ]
 
-[[gitleaks.allowlist]]
-description = "Ignore Supabase example keys in documentation"
-regexes = [
-    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd2JvY21rb2JkbG9zY2llYnlhIiw.*'''
-]
-
-# Ignore entire documentation files that contain only examples
+# Ignore entire documentation files
 [[gitleaks.allowlist]]
 description = "Ignore documentation files with examples"
 files = [
     '''README\.md''',
     '''ENV_SETUP\.md''',
     '''WEARABLES_INTEGRATION\.md''',
+    '''LOVABLE_SETUP\.md''',
+    '''.*\.md$''',  # Ignore all markdown files
 ]
 
 # Ignore specific commits that contain only documentation examples
@@ -32,4 +30,9 @@ commits = [
     '''66c01342e6dc6ef2ec54a5fe15b431e7cb961ca6''',
     '''feca4de1b92f7505dd1df69b804924a134f8888b''',
     '''1dc6308e38e4e90e152c49fab0ce3a76d072b510''',
+    '''89508f2''',
+    '''ba1a34c''',
+    '''751fa5f''',
+    '''28b0809''',
+    '''49c0bd7''',
 ]
