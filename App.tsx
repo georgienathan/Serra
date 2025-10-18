@@ -17,6 +17,7 @@ import Onboarding from './src/screens/onboarding/Onboarding';
 import Dashboard from './src/screens/Dashboard';
 import About from './src/screens/About';
 import Cycle from './src/screens/Cycle';
+import Sleep from './src/screens/Sleep';
 import Nutrition from './src/screens/Nutrition';
 import Exercise from './src/screens/Exercise';
 import Connections from './src/screens/Connections';
@@ -37,6 +38,8 @@ const iconFor = (routeName: string) => {
       return 'info-circle';
     case 'Cycle':
       return 'circle-notch';
+    case 'Sleep':
+      return 'moon';
     case 'Nutrition':
       return 'utensils';
     case 'Exercise':
@@ -108,9 +111,14 @@ const AppTabs = (
       ),
     })}
   >
-    <Tab.Screen name="About" component={About} />
+    <Tab.Screen 
+      name="About" 
+      component={About}
+      options={{ tabBarButton: () => null }} // Hidden from tab bar, accessed via header
+    />
     <Tab.Screen name="Dashboard" component={Dashboard} />
     <Tab.Screen name="Cycle" component={Cycle} />
+    <Tab.Screen name="Sleep" component={Sleep} />
     <Tab.Screen name="Nutrition" component={Nutrition} />
     <Tab.Screen name="Exercise" component={Exercise} />
     <Tab.Screen 

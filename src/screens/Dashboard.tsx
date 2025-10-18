@@ -1,6 +1,6 @@
 // at top
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -108,7 +108,7 @@ export default function Dashboard() {
   }
 
   return (
-    <View style={{ padding: 16, gap: 12 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentContainerStyle={{ padding: 16, gap: 12 }}>
       {/* Calendar Overview */}
       <DayCalendar
         selectedDay={selectedDay}
@@ -125,13 +125,13 @@ export default function Dashboard() {
         onPress={() => nav.navigate('Cycle', { tab: 'period' })}
       />
 
-      {/* Cycle → Sleep subtab */}
+      {/* Sleep tab */}
       <StatCard
         title="SLEEP"
         value={`${(sleepMin / 60).toFixed(1)} hours`}
         accentColor={palette.accent}
         icon={<FontAwesome5 name="moon" size={16} color="white" />}
-        onPress={() => nav.navigate('Cycle', { tab: 'sleep' })}
+        onPress={() => nav.navigate('Sleep')}
       />
 
       {/* Nutrition */}
@@ -195,6 +195,6 @@ export default function Dashboard() {
 
       {/* AI Coach Card */}
       <AICoachCard />
-    </View>
+    </ScrollView>
   );
 }

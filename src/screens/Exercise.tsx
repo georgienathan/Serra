@@ -20,6 +20,7 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
+import TDropdown from '../../components/TDropdown';
 import AttachmentUpload from '../../components/AttachmentUpload';
 import ProcessingBanner from '../../components/ProcessingBanner';
 import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
@@ -59,6 +60,7 @@ const STEP_TYPES: readonly ExerciseType[] = ['walk', 'run'] as const;
 
 type ExercisePayload = {
   type: ExerciseType;
+  custom_type?: string | null; // For when type is 'other'
   duration_min: number;
   distance_km?: number | null;
   steps?: number | null;
@@ -91,6 +93,7 @@ const schema = z.object({
   dateYMD: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD'),
   timeHM: z.string().regex(/^\d{2}:\d{2}$/, 'Use HH:MM'),
   type: z.enum(TYPES),
+  custom_type: z.string().optional(),
   duration: posMinutes,
   distance_km: numStr,
   steps: numStr,
@@ -130,6 +133,7 @@ export default function Exercise() {
       dateYMD: todayYMD(),
       timeHM: nowHM(),
       type: 'run',
+      custom_type: '',
       duration: '',
       distance_km: '',
       steps: '',
@@ -235,6 +239,7 @@ export default function Exercise() {
 
       const payload: ExercisePayload = {
         type: v.type,
+        custom_type: v.type === 'other' ? v.custom_type?.trim() || null : null,
         duration_min: Number(v.duration),
         distance_km: DISTANCE_TYPES.includes(v.type) ? toNum(v.distance_km) : null,
         steps: STEP_TYPES.includes(v.type) ? toNum(v.steps) : null,
@@ -398,22 +403,38 @@ export default function Exercise() {
         />
       )}
 
-      {/* Type chips */}
-      <Text style={styles.label}>Type</Text>
-      <View style={styles.rowWrap}>
+      {/* Type dropdown */}
+      <Controller
+        control={control}
+        name="type"
+        render={({ field: { value, onChange } }) => (
+          <TDropdown
+            label="Exercise Type"
+            value={value}
+            options={TYPES.map(type => ({ value: type, label: type.charAt(0).toUpperCase() + type.slice(1) }))}
+            onSelect={onChange}
+            placeholder="Select exercise type"
+          />
+        )}
+      />
+      {errors.type && <Text style={styles.err}>{errors.type.message}</Text>}
+
+      {/* Custom type input - only show when 'other' is selected */}
+      {typeWatch === 'other' && (
         <Controller
           control={control}
-          name="type"
+          name="custom_type"
           render={({ field: { value, onChange } }) => (
-            <>
-              {TYPES.map((t) => (
-                <TChip key={t} label={t} selected={value === t} onPress={() => onChange(t)} />
-              ))}
-            </>
+            <TInput 
+              label="Custom Exercise Type" 
+              placeholder="Enter exercise type" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+            />
           )}
         />
-      </View>
-      {errors.type && <Text style={styles.err}>{errors.type.message}</Text>}
+      )}
+      {errors.custom_type && <Text style={styles.err}>{errors.custom_type.message}</Text>}
 
       {/* Minutes + Intensity */}
       <View style={styles.row}>
@@ -592,7 +613,7 @@ export default function Exercise() {
             <View key={row.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>
-                  {time} — {e.type} — {e.duration_min ?? 0} min
+                  {time} — {e.type === 'other' && e.custom_type ? e.custom_type : e.type} — {e.duration_min ?? 0} min
                 </Text>
                 <Pressable onPress={() => handleDelete(row.id)} hitSlop={8}>
                   <FontAwesome5 name="trash" size={14} color="#ef4444" />
