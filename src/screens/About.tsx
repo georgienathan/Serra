@@ -8,11 +8,14 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import TInput from '../../components/TInput';
 import { palette } from '../../lib/tw';
 
 export default function About() {
+  const navigation = useNavigation<any>();
   const [email, setEmail] = useState<string>('');
   const [preferredName, setPreferredName] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -88,7 +91,7 @@ export default function About() {
       contentContainerStyle={{ padding: 16, gap: 8 }}
       style={{ backgroundColor: palette.background }}
     >
-      <Text style={styles.title}>About</Text>
+      <Text style={styles.title}>ABOUT</Text>
 
       {!!message && <Text style={styles.msg}>{message}</Text>}
 
@@ -109,7 +112,25 @@ export default function About() {
         disabled={saving}
         style={[styles.saveBtn, saving && { opacity: 0.6 }]}
       >
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>SAVE</Text>}
+      </Pressable>
+
+      <View style={{ height: 24 }} />
+
+      {/* Wearables Connections */}
+      <Text style={styles.section}>Wearables & Devices</Text>
+      <Pressable
+        onPress={() => navigation.navigate('Connections')}
+        style={styles.connectionsButton}
+      >
+        <View style={styles.connectionsContent}>
+          <FontAwesome5 name="link" size={20} color={palette.teal} />
+          <View style={styles.connectionsText}>
+            <Text style={styles.connectionsTitle}>Connected Devices</Text>
+            <Text style={styles.connectionsSubtitle}>Sync data from Oura, Strava, Fitbit & more</Text>
+          </View>
+        </View>
+        <FontAwesome5 name="chevron-right" size={16} color={palette.text} style={{ opacity: 0.5 }} />
       </Pressable>
 
       <View style={{ height: 24 }} />
@@ -139,11 +160,41 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   saveBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: '#f2a1b5',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   saveText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  connectionsButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  connectionsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  connectionsText: {
+    flex: 1,
+  },
+  connectionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.text,
+    marginBottom: 2,
+  },
+  connectionsSubtitle: {
+    fontSize: 13,
+    color: palette.text,
+    opacity: 0.6,
+  },
 });

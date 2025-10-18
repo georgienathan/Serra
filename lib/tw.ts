@@ -8,8 +8,8 @@ const tw = create(config);
 export const palette = (config?.theme?.extend?.colors ?? {}) as {
   background: string;
   accent: string;
-  primary: string;
-  secondary: string;
+  teal: string;
+  green: string;
   text: string;
 };
 

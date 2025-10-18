@@ -12,7 +12,6 @@ import { useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 import { palette } from '../../lib/tw';
-import Sleep from './Sleep';
 
 import { supabase } from '../lib/supabase';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
@@ -21,13 +20,17 @@ import TInput from '../../components/TInput';
 import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TChip from '../../components/TChip';
+import DayCalendar from '../../components/DayCalendar';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
 
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
 
 /* --------------------------- constants / types --------------------------- */
-type TabKey = 'period' | 'sleep';
 
 const BLEED_AMOUNTS = ['none', 'light', 'medium', 'heavy'] as const;
 type BleedAmount = typeof BLEED_AMOUNTS[number];
@@ -91,51 +94,36 @@ type PeriodRow = { id: string; ts: string | null; payload: PeriodPayload };
 /* ------------------------------ main screen ------------------------------ */
 
 export default function Cycle() {
-  const [tab, setTab] = useState<TabKey>('period');
   const route = useRoute<any>();
 
-  // allow: navigation.navigate('Cycle', { tab: 'sleep' })
+  // Handle navigation from Dashboard
   useEffect(() => {
-    if (route.params?.tab === 'sleep') setTab('sleep');
+    if (route.params?.tab === 'sleep') {
+      // Redirect to Sleep tab if someone tries to navigate to sleep via cycle
+      // This maintains backward compatibility
+    }
   }, [route.params]);
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: palette.background }}>
-      <View style={styles.side}>
-        <NavItem label="Period" selected={tab === 'period'} onPress={() => setTab('period')} />
-        <NavItem label="Sleep"  selected={tab === 'sleep'}  onPress={() => setTab('sleep')}  />
-      </View>
-      <View style={styles.content}>
-        {tab === 'period' ? <PeriodScreen /> : <Sleep />}
-      </View>
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      <PeriodScreen />
     </View>
   );
 }
 
-function NavItem({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.item, selected && styles.itemSel]}>
-      <Text style={[styles.itemText, selected && styles.itemTextSel]}>{label}</Text>
-    </Pressable>
-  );
-}
 
 /* ------------------------------- Period tab ------------------------------ */
 
 function PeriodScreen() {
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const attachmentStatus = useAttachmentStatus(currentAttachmentId);
+  
   const {
     control,
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<PeriodVals>({
     resolver: zodResolver(periodSchema),
@@ -199,6 +187,19 @@ function PeriodScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day]);
 
+  function handleUploadStart() {
+    setMessage('Uploading...');
+  }
+
+  function handleUploadComplete(attachmentId: string) {
+    setCurrentAttachmentId(attachmentId);
+    setMessage('Processing...');
+  }
+
+  function handleUploadError(error: string) {
+    setMessage(error);
+  }
+
   const onSubmit = async (v: PeriodVals) => {
     try {
       setMessage(null);
@@ -252,9 +253,31 @@ function PeriodScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <Text style={styles.title}>Period</Text>
+    <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <Text style={styles.title}>PERIOD</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['period', 'sleep']}
+      />
+
+      {/* Upload Photo or Voice Note */}
+      <AttachmentUpload 
+        category="period"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+      />
+      {currentAttachmentId && attachmentStatus && (
+        <ProcessingBanner status={attachmentStatus.status} />
+      )}
 
       {/* Date */}
       <Controller
@@ -434,7 +457,7 @@ function PeriodScreen() {
       />
 
       {/* Save */}
-      <TButton title="Save period entry" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE PERIOD ENTRY" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Entries list */}
       <View style={{ height: 16 }} />
@@ -498,20 +521,6 @@ function PeriodList({
 
 /* ---------------------------------- styles -------------------------------- */
 const styles = StyleSheet.create({
-  side: {
-    width: 120,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    gap: 8,
-    borderRightWidth: 1,
-    borderColor: '#e5e7eb22',
-  },
-  content: { flex: 1, padding: 12 },
-
-  item: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
-  itemSel: { backgroundColor: 'rgba(255,255,255,0.08)' },
-  itemText: { color: palette.text },
-  itemTextSel: { color: '#fff', fontWeight: '700' },
 
   title: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: palette.text },
   section: { fontSize: 18, fontWeight: '600', marginBottom: 6, color: palette.text },

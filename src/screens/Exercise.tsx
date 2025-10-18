@@ -20,7 +20,15 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
+import TDropdown from '../../components/TDropdown';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
+import ExtractionReviewDrawer from '../../components/ExtractionReviewDrawer';
+import DayCalendar from '../../components/DayCalendar';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
+import { getExerciseMetricsForDay } from '../lib/wearable-helpers';
 
 /* ---------------------------------- Types --------------------------------- */
 
@@ -52,12 +60,18 @@ const STEP_TYPES: readonly ExerciseType[] = ['walk', 'run'] as const;
 
 type ExercisePayload = {
   type: ExerciseType;
+  custom_type?: string | null; // For when type is 'other'
   duration_min: number;
   distance_km?: number | null;
   steps?: number | null;
   intensity?: Intensity | null;
   feeling?: Feeling | null;
   notes?: string | null;
+  // Wearable metrics (optional)
+  calories?: number | null;
+  avg_hr?: number | null;
+  max_hr?: number | null;
+  strain?: number | null;
 };
 
 type ExerciseRow = { id: string; ts: string | null; payload: ExercisePayload };
@@ -79,12 +93,18 @@ const schema = z.object({
   dateYMD: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD'),
   timeHM: z.string().regex(/^\d{2}:\d{2}$/, 'Use HH:MM'),
   type: z.enum(TYPES),
+  custom_type: z.string().optional(),
   duration: posMinutes,
   distance_km: numStr,
   steps: numStr,
   intensity: z.enum(INTENSITIES).optional(),
   feeling: z.enum(FEELINGS).optional(),
   notes: z.string().optional(),
+  // Wearable metrics (optional)
+  calories: numStr,
+  avg_hr: numStr,
+  max_hr: numStr,
+  strain: numStr,
 });
 type FormVals = z.infer<typeof schema>;
 
@@ -92,6 +112,11 @@ type FormVals = z.infer<typeof schema>;
 
 export default function Exercise() {
   const [message, setMessage] = useState<string | null>(null);
+  
+  // Upload state
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const [showReviewDrawer, setShowReviewDrawer] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [rows, setRows] = useState<ExerciseRow[]>([]);
 
@@ -101,12 +126,14 @@ export default function Exercise() {
     watch,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
       dateYMD: todayYMD(),
       timeHM: nowHM(),
       type: 'run',
+      custom_type: '',
       duration: '',
       distance_km: '',
       steps: '',
@@ -118,6 +145,20 @@ export default function Exercise() {
 
   const day = watch('dateYMD');
   const typeWatch = watch('type');
+  
+  // Monitor attachment processing
+  const { status: attachmentStatus, extracted } = useAttachmentStatus(currentAttachmentId);
+  
+  // Handle attachment processing completion
+  React.useEffect(() => {
+    if (attachmentStatus === 'ready' && extracted) {
+      setExtractedData(extracted);
+      setShowReviewDrawer(true);
+    } else if (attachmentStatus === 'error') {
+      setMessage('AI processing failed. Please try again.');
+      setCurrentAttachmentId(null);
+    }
+  }, [attachmentStatus, extracted]);
 
   async function loadForDay(d: string) {
     setLoadingList(true);
@@ -151,6 +192,22 @@ export default function Exercise() {
       payload: (r.payload ?? {}) as ExercisePayload,
     }));
     setRows(mapped);
+
+    // Load wearable data and pre-populate form fields
+    const wearableData = await getExerciseMetricsForDay(d);
+    if (wearableData.duration_min > 0 || wearableData.calories > 0) {
+      // Pre-populate wearable fields if data exists
+      setValue('calories', wearableData.calories > 0 ? wearableData.calories.toString() : '');
+      setValue('avg_hr', wearableData.avg_hr > 0 ? Math.round(wearableData.avg_hr).toString() : '');
+      setValue('max_hr', wearableData.max_hr > 0 ? Math.round(wearableData.max_hr).toString() : '');
+      setValue('strain', wearableData.strain > 0 ? wearableData.strain.toFixed(1) : '');
+      
+      // Also pre-populate distance if available
+      if (wearableData.distance_km > 0) {
+        setValue('distance_km', wearableData.distance_km.toFixed(2));
+      }
+    }
+
     setLoadingList(false);
   }
 
@@ -182,12 +239,18 @@ export default function Exercise() {
 
       const payload: ExercisePayload = {
         type: v.type,
+        custom_type: v.type === 'other' ? v.custom_type?.trim() || null : null,
         duration_min: Number(v.duration),
         distance_km: DISTANCE_TYPES.includes(v.type) ? toNum(v.distance_km) : null,
         steps: STEP_TYPES.includes(v.type) ? toNum(v.steps) : null,
         intensity: v.intensity ?? null,
         feeling: v.feeling ?? null,
         notes: v.notes?.trim() || null,
+        // Include wearable metrics if provided
+        calories: toNum(v.calories),
+        avg_hr: toNum(v.avg_hr),
+        max_hr: toNum(v.max_hr),
+        strain: toNum(v.strain),
       };
 
       const { data: u } = await supabase.auth.getUser();
@@ -232,10 +295,71 @@ export default function Exercise() {
     }
   }
 
+  // Upload handlers
+  const handleUploadStart = () => {
+    setMessage(null);
+  };
+
+  const handleUploadComplete = (attachmentId: string) => {
+    setCurrentAttachmentId(attachmentId);
+  };
+
+  const handleUploadError = (error: string) => {
+    setMessage(`Upload failed: ${error}`);
+  };
+
+  // Review drawer handlers
+  const handleFieldChange = (field: string, value: any) => {
+    setExtractedData((prev: any) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleApplyExtractedData = () => {
+    if (extractedData) {
+      // Convert extracted data to form values
+      const formData = {
+        type: extractedData.type || 'other',
+        duration: extractedData.duration_min?.toString() || '',
+        distance_km: extractedData.distance_km?.toString() || '',
+        steps: '', // Not extracted by AI
+        intensity: extractedData.intensity || undefined,
+        feeling: watch('feeling') || '🙂',
+        notes: extractedData.notes || '',
+        // Keep existing values for date/time
+        dateYMD: watch('dateYMD'),
+        timeHM: watch('timeHM')
+      };
+
+      reset(formData);
+      setShowReviewDrawer(false);
+      setCurrentAttachmentId(null);
+      setExtractedData(null);
+      setMessage('AI data applied to form. Please review and save.');
+    }
+  };
+
+  const handleCancelReview = () => {
+    setShowReviewDrawer(false);
+    setCurrentAttachmentId(null);
+    setExtractedData(null);
+  };
+
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Exercise</Text>
+      <Text style={styles.title}>EXERCISE</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['exercise']}
+      />
 
       {/* Date + Time */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
@@ -261,22 +385,56 @@ export default function Exercise() {
         </View>
       </View>
 
-      {/* Type chips */}
-      <Text style={styles.label}>Type</Text>
-      <View style={styles.rowWrap}>
+      {/* AI Upload */}
+      <AttachmentUpload
+        category="exercise"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+        disabled={isSubmitting}
+      />
+
+      {/* Processing Banner */}
+      {currentAttachmentId && (
+        <ProcessingBanner
+          status={attachmentStatus}
+          error={attachmentStatus === 'error' ? 'Processing failed' : undefined}
+        />
+      )}
+
+      {/* Type dropdown */}
+      <Controller
+        control={control}
+        name="type"
+        render={({ field: { value, onChange } }) => (
+          <TDropdown
+            label="Exercise Type"
+            value={value}
+            options={TYPES.map(type => ({ value: type, label: type.charAt(0).toUpperCase() + type.slice(1) }))}
+            onSelect={onChange}
+            placeholder="Select exercise type"
+          />
+        )}
+      />
+      {errors.type && <Text style={styles.err}>{errors.type.message}</Text>}
+
+      {/* Custom type input - only show when 'other' is selected */}
+      {typeWatch === 'other' && (
         <Controller
           control={control}
-          name="type"
+          name="custom_type"
           render={({ field: { value, onChange } }) => (
-            <>
-              {TYPES.map((t) => (
-                <TChip key={t} label={t} selected={value === t} onPress={() => onChange(t)} />
-              ))}
-            </>
+            <TInput 
+              label="Custom Exercise Type" 
+              placeholder="Enter exercise type" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+            />
           )}
         />
-      </View>
-      {errors.type && <Text style={styles.err}>{errors.type.message}</Text>}
+      )}
+      {errors.custom_type && <Text style={styles.err}>{errors.custom_type.message}</Text>}
 
       {/* Minutes + Intensity */}
       <View style={styles.row}>
@@ -372,7 +530,64 @@ export default function Exercise() {
         )}
       />
 
-      <TButton title="Save workout" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      {/* Wearable Metrics Section */}
+      <View style={{ height: 16 }} />
+      <Text style={styles.section}>Wearable Data (auto-populated)</Text>
+      <Text style={{ color: palette.text, opacity: 0.7, fontSize: 12, marginBottom: 8 }}>
+        These fields are automatically filled from your wearables. You can edit them manually.
+      </Text>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Calories</Text>
+          <Controller control={control} name="calories" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Avg HR (bpm)</Text>
+          <Controller control={control} name="avg_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Max HR (bpm)</Text>
+          <Controller control={control} name="max_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Strain</Text>
+          <Controller control={control} name="strain" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0.0" 
+              value={value ?? ''} 
+              onChangeText={onChange} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <TButton title="SAVE WORKOUT" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       {/* Totals */}
       <View style={{ height: 16 }} />
@@ -398,7 +613,7 @@ export default function Exercise() {
             <View key={row.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>
-                  {time} — {e.type} — {e.duration_min ?? 0} min
+                  {time} — {e.type === 'other' && e.custom_type ? e.custom_type : e.type} — {e.duration_min ?? 0} min
                 </Text>
                 <Pressable onPress={() => handleDelete(row.id)} hitSlop={8}>
                   <FontAwesome5 name="trash" size={14} color="#ef4444" />
@@ -409,12 +624,32 @@ export default function Exercise() {
               {e.intensity && <Text style={styles.text}>Intensity: {e.intensity}</Text>}
               {e.feeling && <Text style={styles.text}>Feeling: {e.feeling}</Text>}
               {e.notes ? <Text style={styles.text}>Notes: {e.notes}</Text> : null}
+              {/* Display wearable metrics if available */}
+              {(e.calories || e.avg_hr || e.max_hr || e.strain) && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={{ ...styles.text, fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Wearable Data:</Text>
+                  {e.calories && <Text style={{ ...styles.text, fontSize: 12 }}>Calories: {e.calories} kcal</Text>}
+                  {e.avg_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Avg HR: {e.avg_hr} bpm</Text>}
+                  {e.max_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Max HR: {e.max_hr} bpm</Text>}
+                  {e.strain && <Text style={{ ...styles.text, fontSize: 12 }}>Strain: {e.strain}</Text>}
+                </View>
+              )}
             </View>
           );
         })
       )}
 
       <View style={{ height: 24 }} />
+      
+      {/* Extraction Review Drawer */}
+      <ExtractionReviewDrawer
+        visible={showReviewDrawer}
+        extracted={extractedData || {}}
+        category="exercise"
+        onApply={handleApplyExtractedData}
+        onCancel={handleCancelReview}
+        onFieldChange={handleFieldChange}
+      />
     </ScrollView>
   );
 }

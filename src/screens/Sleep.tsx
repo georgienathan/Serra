@@ -20,10 +20,17 @@ import TButton from '../../components/TButton';
 import TDateInput from '../../components/TDateInput';
 import TTimeInput from '../../components/TTimeInput';
 import TChip from '../../components/TChip';
+import DayCalendar from '../../components/DayCalendar';
+import AttachmentUpload from '../../components/AttachmentUpload';
+import ProcessingBanner from '../../components/ProcessingBanner';
 import { todayYMD, nowHM, toUTCISO } from '../lib/datetime';
+import { getSleepMetricsForDay } from '../lib/wearable-helpers';
+import { uploadAndProcess } from '../lib/attachments';
+import { useAttachmentStatus } from '../hooks/useAttachmentStatus';
+import { MoodType, MOOD_ICONS, MOOD_LABELS } from '../lib/mood-icons';
 
 type Quality = 'poor' | 'ok' | 'good';
-type Feeling = '🙂' | '😐' | '☹️';
+type Feeling = MoodType;
 
 type SleepPayload = {
   bedtime: string;          // "HH:MM" local
@@ -32,12 +39,18 @@ type SleepPayload = {
   quality?: Quality | null;
   feeling?: Feeling | null;
   notes?: string | null;
+  // Wearable metrics (optional)
+  deep_min?: number | null;
+  rem_min?: number | null;
+  sleep_score?: number | null;
+  resting_hr?: number | null;
+  hrv?: number | null;
 };
 
 type SleepRow = { id: string; ts: string | null; payload: SleepPayload };
 
 const QUALITIES = ['poor', 'ok', 'good'] as const;
-const FEELINGS = ['🙂', '😐', '☹️'] as const;
+const FEELINGS = ['happy', 'neutral', 'sad'] as const;
 
 const timeHM = z.string().regex(/^\d{2}:\d{2}$/, 'Use HH:MM');
 const schema = z.object({
@@ -47,6 +60,12 @@ const schema = z.object({
   quality: z.enum(QUALITIES).optional(),
   feeling: z.enum(FEELINGS).optional(),
   notes: z.string().optional(),
+  // Wearable metrics (optional)
+  deep_min: z.number().optional(),
+  rem_min: z.number().optional(),
+  sleep_score: z.number().optional(),
+  resting_hr: z.number().optional(),
+  hrv: z.number().optional(),
 });
 type FormVals = z.infer<typeof schema>;
 
@@ -73,6 +92,10 @@ export default function Sleep() {
   const [message, setMessage] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [rows, setRows] = useState<SleepRow[]>([]);
+  
+  // Upload state
+  const [currentAttachmentId, setCurrentAttachmentId] = useState<string | null>(null);
+  const attachmentStatus = useAttachmentStatus(currentAttachmentId);
 
   const {
     control,
@@ -80,6 +103,7 @@ export default function Sleep() {
     watch,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -87,7 +111,7 @@ export default function Sleep() {
       bedHM: '23:00',
       wakeHM: nowHM(),
       quality: 'ok',
-      feeling: '🙂',
+      feeling: 'happy',
       notes: '',
     },
   });
@@ -129,6 +153,18 @@ export default function Sleep() {
     }));
 
     setRows(mapped);
+
+    // Load wearable data and pre-populate form fields
+    const wearableData = await getSleepMetricsForDay(d);
+    if (wearableData.duration_min > 0 || wearableData.deep_min > 0 || wearableData.rem_min > 0) {
+      // Pre-populate wearable fields if data exists
+      setValue('deep_min', wearableData.deep_min || undefined);
+      setValue('rem_min', wearableData.rem_min || undefined);
+      setValue('sleep_score', wearableData.sleep_score || undefined);
+      setValue('resting_hr', wearableData.resting_hr || undefined);
+      setValue('hrv', wearableData.hrv || undefined);
+    }
+
     setLoadingList(false);
   }
 
@@ -159,6 +195,12 @@ export default function Sleep() {
         quality: v.quality ?? null,
         feeling: v.feeling ?? null,
         notes: v.notes?.trim() || null,
+        // Include wearable metrics if provided
+        deep_min: v.deep_min ?? null,
+        rem_min: v.rem_min ?? null,
+        sleep_score: v.sleep_score ?? null,
+        resting_hr: v.resting_hr ?? null,
+        hrv: v.hrv ?? null,
       };
 
       const { data: u } = await supabase.auth.getUser();
@@ -194,12 +236,47 @@ export default function Sleep() {
     }
   }
 
+  function handleUploadStart() {
+    setMessage('Uploading...');
+  }
+
+  function handleUploadComplete(attachmentId: string) {
+    setCurrentAttachmentId(attachmentId);
+    setMessage('Processing...');
+  }
+
+  function handleUploadError(error: string) {
+    setMessage(error);
+  }
+
   const previewHours = (durationFrom(bedHM, wakeHM) / 60).toFixed(2);
 
   return (
     <ScrollView style={{ backgroundColor: palette.background }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.title}>Sleep</Text>
+      <Text style={styles.title}>SLEEP</Text>
       {!!message && <Text style={styles.msg}>{message}</Text>}
+
+      {/* Upload Photo or Voice Note */}
+      <AttachmentUpload 
+        category="sleep"
+        day={day}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+      />
+      {currentAttachmentId && attachmentStatus && (
+        <ProcessingBanner status={attachmentStatus.status} />
+      )}
+
+      {/* Calendar */}
+      <DayCalendar
+        selectedDay={day}
+        onSelect={(newDay) => {
+          setValue('dateYMD', newDay);
+          loadForDay(newDay);
+        }}
+        categories={['period', 'sleep']}
+      />
 
       <Controller control={control} name="dateYMD" render={({ field: { value, onChange } }) => (
         <TDateInput label="Wake date" value={value} onChange={onChange} />
@@ -221,23 +298,42 @@ export default function Sleep() {
         </View>
       </View>
 
-      <Text style={styles.label}>Quality</Text>
+      <Text style={styles.label}>QUALITY</Text>
       <View style={styles.rowWrap}>
-        <Controller control={control} name="quality" render={({ field: { value, onChange } }) => (
+        <Controller control={control} name="quality" render={({ field: { value, onChange} }) => (
           <>
             {QUALITIES.map(q => (
-              <TChip key={q} label={q} selected={value === q} onPress={() => onChange(q)} />
+              <TChip key={q} label={q.toUpperCase()} selected={value === q} onPress={() => onChange(q)} />
             ))}
           </>
         )} />
       </View>
 
-      <Text style={styles.label}>Feeling</Text>
+      <Text style={styles.label}>FEELING</Text>
       <View style={styles.rowWrap}>
         <Controller control={control} name="feeling" render={({ field: { value, onChange } }) => (
           <>
             {FEELINGS.map(f => (
-              <TChip key={f} label={f} selected={value === f} onPress={() => onChange(f)} />
+              <Pressable
+                key={f}
+                onPress={() => onChange(f)}
+                style={[
+                  styles.moodButton,
+                  value === f && styles.moodButtonSelected
+                ]}
+              >
+                <FontAwesome5 
+                  name={MOOD_ICONS[f]} 
+                  size={20} 
+                  color={value === f ? palette.teal : palette.text} 
+                />
+                <Text style={[
+                  styles.moodLabel,
+                  value === f && styles.moodLabelSelected
+                ]}>
+                  {MOOD_LABELS[f]}
+                </Text>
+              </Pressable>
             ))}
           </>
         )} />
@@ -247,11 +343,78 @@ export default function Sleep() {
         <TInput placeholder="Notes (optional)" value={value ?? ''} onChangeText={onChange} />
       )} />
 
+      {/* Wearable Metrics Section */}
+      <View style={{ height: 16 }} />
+      <Text style={styles.section}>Wearable Data (auto-populated)</Text>
+      <Text style={{ color: palette.text, opacity: 0.7, fontSize: 12, marginBottom: 8 }}>
+        These fields are automatically filled from your wearables. You can edit them manually.
+      </Text>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Deep sleep (min)</Text>
+          <Controller control={control} name="deep_min" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>REM sleep (min)</Text>
+          <Controller control={control} name="rem_min" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Sleep score</Text>
+          <Controller control={control} name="sleep_score" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0-100" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Resting HR (bpm)</Text>
+          <Controller control={control} name="resting_hr" render={({ field: { value, onChange } }) => (
+            <TInput 
+              placeholder="0" 
+              value={value?.toString() ?? ''} 
+              onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+              keyboardType="numeric"
+            />
+          )} />
+        </View>
+      </View>
+
+      <Text style={styles.label}>HRV (ms)</Text>
+      <Controller control={control} name="hrv" render={({ field: { value, onChange } }) => (
+        <TInput 
+          placeholder="0" 
+          value={value?.toString() ?? ''} 
+          onChangeText={(t) => onChange(t ? parseFloat(t) : undefined)} 
+          keyboardType="numeric"
+        />
+      )} />
+
       <Text style={{ color: palette.text, marginVertical: 8 }}>
         Estimated duration: <Text style={{ fontWeight: '700' }}>{previewHours} h</Text>
       </Text>
 
-      <TButton title="Save sleep" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
+      <TButton title="SAVE SLEEP" onPress={handleSubmit(onSubmit)} loading={isSubmitting} />
 
       <View style={{ height: 16 }} />
       <Text style={styles.section}>Total for {day}</Text>
@@ -278,9 +441,20 @@ export default function Sleep() {
                   <FontAwesome5 name="trash" size={14} color="#ef4444" />
                 </Pressable>
               </View>
-              {e.quality && <Text style={styles.text}>Quality: {e.quality}</Text>}
-              {e.feeling && <Text style={styles.text}>Feeling: {e.feeling}</Text>}
-              {e.notes ? <Text style={styles.text}>Notes: {e.notes}</Text> : null}
+              {e.quality && <Text style={styles.text}>QUALITY: {e.quality.toUpperCase()}</Text>}
+              {e.feeling && <Text style={styles.text}>FEELING: {MOOD_LABELS[e.feeling as MoodType] || e.feeling}</Text>}
+              {e.notes ? <Text style={styles.text}>NOTES: {e.notes}</Text> : null}
+              {/* Display wearable metrics if available */}
+              {(e.deep_min || e.rem_min || e.sleep_score || e.resting_hr || e.hrv) && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={{ ...styles.text, fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Wearable Data:</Text>
+                  {e.deep_min && <Text style={{ ...styles.text, fontSize: 12 }}>Deep: {e.deep_min} min</Text>}
+                  {e.rem_min && <Text style={{ ...styles.text, fontSize: 12 }}>REM: {e.rem_min} min</Text>}
+                  {e.sleep_score && <Text style={{ ...styles.text, fontSize: 12 }}>Score: {e.sleep_score}</Text>}
+                  {e.resting_hr && <Text style={{ ...styles.text, fontSize: 12 }}>Resting HR: {e.resting_hr} bpm</Text>}
+                  {e.hrv && <Text style={{ ...styles.text, fontSize: 12 }}>HRV: {e.hrv} ms</Text>}
+                </View>
+              )}
             </View>
           );
         })
@@ -301,6 +475,29 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'flex-end' },
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
+  moodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  moodButtonSelected: {
+    borderColor: palette.teal,
+    backgroundColor: '#fff',
+  },
+  moodLabel: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  moodLabelSelected: {
+    color: palette.teal,
+  },
 
   card: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 12, marginBottom: 8 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },

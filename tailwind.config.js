@@ -3,10 +3,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#1b0b2e', 
-        accent:     '#f48fb1', 
-        primary:    '#81c784', 
-        secondary:  '#26a69a', 
+        background: '#130826', 
+        accent:     '#f2a1b5', 
+        teal:       '#3ccbc5', 
+        green:      '#7ccf9c', 
         text:       '#ffffff', 
       },
       borderRadius: {

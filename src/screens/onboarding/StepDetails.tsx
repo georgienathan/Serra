@@ -29,20 +29,20 @@ export default function StepDetails(props: Props) {
   } = props;
 
   const Btn = ({ label, onPress, selected }: {label: string; onPress: () => void; selected?: boolean}) => (
-    <Pressable onPress={onPress} style={{ padding: 10, borderRadius: 10, borderWidth: 1, borderColor: selected ? '#111827' : '#ccc', marginRight: 8, marginBottom: 8 }}>
-      <Text style={{ color: selected ? '#111827' : '#333' }}>{label}</Text>
+    <Pressable onPress={onPress} style={{ padding: 10, borderRadius: 10, borderWidth: 1, borderColor: selected ? '#3ccbc5' : '#ccc', backgroundColor: selected ? '#3ccbc5' : 'transparent', marginRight: 8, marginBottom: 8 }}>
+      <Text style={{ color: selected ? '#fff' : '#fff' }}>{label}</Text>
     </Pressable>
   );
 
   return (
     <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12 }}>Welcome to Serra!</Text>
+      <Text style={{ fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#fff' }}>Welcome to Serra!</Text>
 
       <TextInput placeholder="Preferred Name?" value={preferredName} onChangeText={setPreferredName}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
 
       <TextInput placeholder="Age?" keyboardType="number-pad" value={age} onChangeText={setAge}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
 
       <Text style={{ marginTop: 6, marginBottom: 6 }}>Menstruating?</Text>
       <View style={{ flexDirection:'row', marginBottom:10 }}>
@@ -58,7 +58,7 @@ export default function StepDetails(props: Props) {
       </View>
 
       <TextInput placeholder="Disability? (optional)" value={disability} onChangeText={setDisability}
-        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10 }} />
+        style={{ borderWidth:1,borderColor:'#ccc',borderRadius:12,padding:12, marginBottom:10, backgroundColor:'#fff', color:'#111827' }} />
 
       <Text style={{ marginTop: 6, marginBottom: 6 }}>Children?</Text>
       <View style={{ flexDirection:'row', flexWrap: 'wrap', marginBottom:18 }}>
@@ -67,7 +67,7 @@ export default function StepDetails(props: Props) {
         ))}
       </View>
 
-      <Pressable onPress={onNext} style={{ backgroundColor: '#f7a1b2', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
+      <Pressable onPress={onNext} style={{ backgroundColor: '#f2a1b5', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}>
         <Text style={{ color: 'white', fontWeight: '700' }}>Continue</Text>
       </Pressable>
     </View>
