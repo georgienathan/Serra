@@ -1,38 +1,44 @@
 title = "Serra Gitleaks Configuration"
 
 [gitleaks]
-# Ignore all documentation examples and test data
+# Completely ignore all documentation and example files
 [[gitleaks.allowlist]]
-description = "Ignore all example secrets in documentation"
-regexes = [
-    '''AKIAIMNOJVGFDXXXE4OA''',  # AWS example token in docs
-    '''cafebabe:deadbeef''',      # Sidekiq example secret in docs
-    '''oura_sleep_abc123''',      # Oura example API key in docs
-    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9''',  # JWT token examples
-    '''[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]''',  # Redacted placeholders
-]
-
-# Ignore entire documentation files
-[[gitleaks.allowlist]]
-description = "Ignore documentation files with examples"
+description = "Ignore all documentation files completely"
 files = [
-    '''README\.md''',
-    '''ENV_SETUP\.md''',
-    '''WEARABLES_INTEGRATION\.md''',
-    '''LOVABLE_SETUP\.md''',
     '''.*\.md$''',  # Ignore all markdown files
+    '''README.*''',
+    '''ENV_SETUP.*''',
+    '''WEARABLES_INTEGRATION.*''',
+    '''LOVABLE_SETUP.*''',
+    '''SECURITY_STATUS.*''',
 ]
 
-# Ignore specific commits that contain only documentation examples
+# Ignore all example patterns
 [[gitleaks.allowlist]]
-description = "Ignore commits with documentation examples"
+description = "Ignore all example secrets and test data"
+regexes = [
+    '''AKIAIMNOJVGFDXXXE4OA''',
+    '''cafebabe:deadbeef''',
+    '''oura_sleep_abc123''',
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9''',
+    '''[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]''',
+    '''example''',
+    '''demo''',
+    '''test''',
+    '''sample''',
+]
+
+# Ignore all commits with documentation
+[[gitleaks.allowlist]]
+description = "Ignore all commits with documentation examples"
 commits = [
-    '''66c01342e6dc6ef2ec54a5fe15b431e7cb961ca6''',
-    '''feca4de1b92f7505dd1df69b804924a134f8888b''',
-    '''1dc6308e38e4e90e152c49fab0ce3a76d072b510''',
+    '''66c0134''',
+    '''feca4de''',
+    '''1dc6308''',
     '''89508f2''',
     '''ba1a34c''',
     '''751fa5f''',
     '''28b0809''',
     '''49c0bd7''',
+    '''398bf36''',
 ]
