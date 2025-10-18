@@ -6,8 +6,8 @@
 ```env
 # Supabase Configuration
 # Get these from your Supabase project settings -> API
-SUPABASE_URL=https://iawbocmkobdlosciebya.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd2JvY21rb2JkbG9zY2llYnlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxMzcyMDksImV4cCI6MjA3NDcxMzIwOX0.8L8rIufz76OaNrRF4TwwkJT2kMQgftoCG_lZ8nwc1vs
+SUPABASE_URL=https://[YOUR_PROJECT_ID].supabase.co
+SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
 ```
 
 2. **`app.config.ts`** - Updated to load environment variables and expose them under `extra`
