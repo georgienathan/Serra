@@ -1,0 +1,38 @@
+.expo
+.expo-shared
+/dist
+/build
+android/
+ios/
+
+# Node / tooling
+node_modules
+npm-debug.log*
+yarn-error.log
+.DS_Store
+
+# Local config
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Secrets and sensitive files
+google-services.json
+GoogleService-Info.plist
+service-account-*.json
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+
+# API keys and tokens (additional protection)
+*secret*
+*key*
+*token*
+*credential*
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
