@@ -1,0 +1,26 @@
+title = "Serra Gitleaks Configuration"
+
+[gitleaks]
+# Ignore historical documentation examples that are not real secrets
+[[gitleaks.allowlist]]
+description = "Ignore example secrets in documentation"
+regexes = [
+    '''AKIAIMNOJVGFDXXXE4OA''',  # AWS example token in docs
+    '''cafebabe:deadbeef''',      # Sidekiq example secret in docs
+    '''oura_sleep_abc123''',      # Oura example API key in docs
+]
+
+[[gitleaks.allowlist]]
+description = "Ignore Supabase example keys in documentation"
+regexes = [
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd2JvY21rb2JkbG9zY2llYnlhIiw.*'''
+]
+
+# Ignore files that contain only documentation examples
+[[gitleaks.allowlist]]
+description = "Ignore documentation files with examples"
+files = [
+    '''README\.md''',
+    '''ENV_SETUP\.md''',
+    '''WEARABLES_INTEGRATION\.md''',
+]

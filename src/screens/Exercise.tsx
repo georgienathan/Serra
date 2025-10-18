@@ -421,18 +421,20 @@ export default function Exercise() {
 
       {/* Custom type input - only show when 'other' is selected */}
       {typeWatch === 'other' && (
-        <Controller
-          control={control}
-          name="custom_type"
-          render={({ field: { value, onChange } }) => (
-            <TInput 
-              label="Custom Exercise Type" 
-              placeholder="Enter exercise type" 
-              value={value ?? ''} 
-              onChangeText={onChange} 
-            />
-          )}
-        />
+        <>
+          <Text style={styles.label}>Custom Exercise Type</Text>
+          <Controller
+            control={control}
+            name="custom_type"
+            render={({ field: { value, onChange } }) => (
+              <TInput 
+                placeholder="Enter exercise type" 
+                value={value ?? ''} 
+                onChangeText={onChange} 
+              />
+            )}
+          />
+        </>
       )}
       {errors.custom_type && <Text style={styles.err}>{errors.custom_type.message}</Text>}
 
